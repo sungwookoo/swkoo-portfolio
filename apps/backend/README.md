@@ -10,6 +10,10 @@ NestJS 기반의 API 서버로, `https://swkoo.kr` 포트폴리오 애플리케�
 ## 환경 변수
 - `PORT` : API 포트(기본 3000)
 - `CORS_ORIGINS` : 허용할 오리진 목록(콤마 구분, 기본 `*`)
+- `ARGOCD_BASE_URL` : Argo CD API 엔드포인트 URL (예: `https://argocd.swkoo.kr`)
+- `ARGOCD_AUTH_TOKEN` : Argo CD API 토큰 (`Bearer xyz` 형태)
+- `ARGOCD_PROJECTS` *(선택)* : 조회할 프로젝트 슬러그 CSV (기본 전체)
+- `PIPELINES_CACHE_TTL` *(선택)* : 파이프라인 응답 캐시 TTL(초, 기본 15)
 
 ## 추후 작업
 - Argo CD API 연동(`GET /api/pipelines`)

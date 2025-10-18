@@ -7,7 +7,13 @@
 1. **Argo CD → NestJS**  
    - NestJS 서비스 계정(SA) 생성 및 `argocd` 네임스페이스에 `ClusterRole` 바인딩.  
    - `argocd login` 대신 HTTPS API 호출을 위해 토큰 시크릿(`argocd-manager-token`)을 발급하고 K8s Secret로 관리.
-   - NestJS는 `ARGOCD_BASE_URL`, `ARGOCD_AUTH_TOKEN` 환경변수로 인증 정보를 주입받음.
+   - NestJS는 아래 환경 변수를 사용해 인증 정보를 주입받는다.
+     | 변수명 | 설명 | 예시 |
+     | --- | --- | --- |
+     | `ARGOCD_BASE_URL` | Argo CD API 엔드포인트 | `https://argocd.swkoo.kr` |
+     | `ARGOCD_AUTH_TOKEN` | Argo CD API 토큰 | `bearer <token>` |
+     | `ARGOCD_PROJECTS` *(옵션)* | 조회할 프로젝트 슬러그 CSV | `swkoo,default` |
+     | `PIPELINES_CACHE_TTL` *(옵션)* | 캐시 TTL 초 단위 | `15` |
 
 2. **NestJS → Frontend**  
    - `/api/pipelines` 엔드포인트가 Argo CD `applications` API를 호출하여 `health.status`, `sync.status`, `operationState` 정보를 요약.  
@@ -22,6 +28,7 @@
   - `ArgoCdClient` : Axios 래퍼, 인증 헤더/에러 처리.
   - `PipelinesService` : Argo CD API 호출(예: `/api/v1/applications?projects=swkoo`), 캐싱, DTO 변환.
   - `PipelinesController` : `GET /pipelines`, `GET /pipelines/:name`.
+  - `PipelinesConfig` : `@nestjs/config`를 이용해 환경변수 스키마 유효성 체크.
 - `Persistence` (Phase 2 이후 선택)
   - In-memory cache(예: `Map<string, PipelineSnapshot>`) + TTL
   - Redis/Mongo 등 외부 스토리지로 확장 가능.

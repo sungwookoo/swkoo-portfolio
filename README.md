@@ -25,13 +25,14 @@
 
 ### Phase 2 – GitOps 이벤트 수집 MVP
 1. **Argo CD 연동**
-   - 서비스어카운트 + 토큰 발급 → NestJS에서 Argo CD API 호출.
-   - `GET /pipelines` : Argo CD Application 상태 목록 반환.
+   - ✅ NestJS PipelinesModule + Argo CD API 클라이언트 (`GET /api/pipelines`, `GET /api/pipelines/:name`)
+   - ☐ 서비스어카운트/토큰 배포 및 Kubernetes Secret 관리 자동화.
 2. **백엔드 저장소**
-   - 간단한 in-memory 캐시 + TTL로 시작하고, 필요하면 Redis 등 외부 스토리지 도입.
+   - ✅ 인메모리 캐시 + TTL 기본 구현 (환경변수 `PIPELINES_CACHE_TTL`).
+   - ☐ Redis/Mongo 등 외부 스토리지 도입 검토.
 3. **프론트엔드 시각화**
-   - 파이프라인 카드/타임라인 UI 구성.
-   - 폴링(예: 15초)으로 Application Sync 상태 갱신.
+   - ✅ Pipeline Observatory 섹션에서 상태 배지/타임라인 카드 표시.
+   - ☐ 실시간 갱신(폴링 → WebSocket/SSE) 도입.
 
 ### Phase 3 – 실시간/확장
 1. **실시간 이벤트**

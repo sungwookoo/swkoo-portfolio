@@ -1,9 +1,9 @@
-import type { PortfolioOverview } from './types';
+import type { PipelinesEnvelope, PortfolioOverview } from './types';
 
 const defaultBaseUrl =
   process.env.NODE_ENV === 'development' ? 'http://localhost:3000/api' : undefined;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultBaseUrl;
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultBaseUrl;
 
 export async function fetchOverview(): Promise<PortfolioOverview | null> {
   if (!API_BASE_URL) {
@@ -24,5 +24,45 @@ export async function fetchOverview(): Promise<PortfolioOverview | null> {
   } catch (error) {
     console.warn('Overview request failed', error);
     return null;
+  }
+}
+
+export async function fetchPipelines(): Promise<PipelinesEnvelope> {
+  if (!API_BASE_URL) {
+    return {
+      configured: false,
+      fetchedAt: null,
+      pipelines: []
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/pipelines`, {
+      next: { revalidate: 15 }
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to load pipelines', response.statusText);
+      return {
+        configured: false,
+        fetchedAt: null,
+        pipelines: []
+      };
+    }
+
+    const payload = (await response.json()) as PipelinesEnvelope;
+
+    return {
+      configured: Boolean(payload.configured),
+      fetchedAt: payload.fetchedAt ?? null,
+      pipelines: Array.isArray(payload.pipelines) ? payload.pipelines : []
+    };
+  } catch (error) {
+    console.warn('Pipelines request failed', error);
+    return {
+      configured: false,
+      fetchedAt: null,
+      pipelines: []
+    };
   }
 }
