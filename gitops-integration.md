@@ -45,6 +45,15 @@ stringData:
   ARGOCD_BASE_URL: https://argocd.swkoo.kr
   ARGOCD_AUTH_TOKEN: <token>
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ocir-credentials
+  namespace: swkoo
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded docker login>
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

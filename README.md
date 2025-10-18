@@ -49,6 +49,18 @@
 - **테스트**: Jest(Nest 기본), Playwright/React Testing Library(프론트).
 - **CI/CD**: GitOps 파이프라인에서 빌드 → Docker 이미지 → OCI Registry → Argo CD 배포.
 
+## 컨테이너 빌드
+- 백엔드: `scripts/build-backend.sh <이미지태그>` → `apps/backend/Dockerfile`
+- 프론트엔드: `scripts/build-frontend.sh <이미지태그>` → `apps/frontend/Dockerfile`
+- 런타임 환경변수
+  - Backend: `PORT`, `ARGOCD_BASE_URL`, `ARGOCD_AUTH_TOKEN`, `PIPELINES_CACHE_TTL`
+  - Frontend: `PORT`, `NEXT_PUBLIC_API_BASE_URL`
+
+## CI/CD 파이프라인
+- GitHub Actions: `.github/workflows/docker-publish.yml`
+  - 기본 브랜치 푸시 시 백엔드/프론트엔드 이미지를 빌드 후 OCIR로 푸시
+  - 필요한 시크릿과 절차는 `docs/registry.md` 참고
+
 ## 인프라 통합 고려사항
 - Terraform으로 `swkoo.kr` 애플리케이션 네임스페이스/Ingress/증서를 관리할 모듈 추가.
 - OCI Registry와 GitHub Actions/Argo CD 간 인증 전략 정리(서비스 어카운트, ImagePullSecret).

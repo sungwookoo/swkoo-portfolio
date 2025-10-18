@@ -6,6 +6,7 @@ NestJS 기반의 API 서버로, `https://swkoo.kr` 포트폴리오 애플리케�
 - `npm run start:dev` : 개발 모드(TS → 즉시 실행)
 - `npm run build` : `dist/`로 컴파일
 - `npm run start` : 컴파일 결과 실행
+- `scripts/build-backend.sh ghcr.io/<org>/swkoo-backend:<tag>` : 컨테이너 이미지 빌드
 
 ## 환경 변수
 - `PORT` : API 포트(기본 3000)
@@ -19,3 +20,15 @@ NestJS 기반의 API 서버로, `https://swkoo.kr` 포트폴리오 애플리케�
 - Argo CD API 연동(`GET /api/pipelines`)
 - 배포 이벤트 캐시/저장소 구성
 - 인증/인가(필요시)
+
+## Docker 실행 예시
+```bash
+# 이미지 빌드
+scripts/build-backend.sh swkoo-backend:local
+
+# 컨테이너 실행
+docker run --rm -p 3000:3000 \
+  -e ARGOCD_BASE_URL=https://argocd.swkoo.kr \
+  -e ARGOCD_AUTH_TOKEN=eyJhbGciOi... \
+  swkoo-backend:local
+```

@@ -1,0 +1,60 @@
+name: Build and Push Containers
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY_HOST: ${{ secrets.OCI_REGISTRY_HOST }} # 예: icn.ocir.io
+  NAMESPACE: ${{ secrets.OCI_TENANCY_NAMESPACE }}
+  BACKEND_REPO: ${{ secrets.OCI_BACKEND_REPO }} # 예: swkoo-backend
+  FRONTEND_REPO: ${{ secrets.OCI_FRONTEND_REPO }} # 예: swkoo-frontend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Log in to OCI registry
+        env:
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+          OCI_AUTH_TOKEN: ${{ secrets.OCI_AUTH_TOKEN }}
+        run: |
+          if [ -z "$REGISTRY_HOST" ]; then
+            echo "REGISTRY_HOST secret is required" >&2
+            exit 1
+          fi
+          echo "$OCI_AUTH_TOKEN" | docker login "${REGISTRY_HOST}" --username "$OCI_USERNAME" --password-stdin
+
+      - name: Build backend image
+        run: |
+          export PATH="/usr/local/bin:$PATH"
+          ./scripts/build-backend.sh "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${GITHUB_SHA}"
+          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${GITHUB_SHA}" "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
+
+      - name: Build frontend image
+        run: |
+          export PATH="/usr/local/bin:$PATH"
+          ./scripts/build-frontend.sh "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${GITHUB_SHA}"
+          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${GITHUB_SHA}" "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"
+
+      - name: Push backend image
+        run: |
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${GITHUB_SHA}"
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
+
+      - name: Push frontend image
+        run: |
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${GITHUB_SHA}"
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"
