@@ -1,8 +1,15 @@
 import type { PortfolioOverview } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api';
+const defaultBaseUrl =
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3000/api' : undefined;
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultBaseUrl;
 
 export async function fetchOverview(): Promise<PortfolioOverview | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/overview`, {
       next: { revalidate: 60 }
