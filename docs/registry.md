@@ -5,10 +5,10 @@
 
 | Secret Key | 설명 | 예시 |
 | --- | --- | --- |
-| `OCI_REGISTRY_HOST` | OCIR 엔드포인트 호스트 | `icn.ocir.io` |
-| `OCI_TENANCY_NAMESPACE` | 테넌시 네임스페이스 | `axxxxdhlru6z` |
-| `OCI_BACKEND_REPO` | 백엔드 리포지토리 이름 | `swkoo-backend` |
-| `OCI_FRONTEND_REPO` | 프론트엔드 리포지토리 이름 | `swkoo-frontend` |
+| `OCI_REGISTRY_HOST` | OCIR 엔드포인트 호스트 | `nrt.ocir.io` |
+| `OCI_TENANCY_NAMESPACE` | 테넌시 네임스페이스 | `nrznn4yiltsz` |
+| `OCI_BACKEND_REPO` | 백엔드 이미지 리포지토리 | `swkoo` |
+| `OCI_FRONTEND_REPO` | 프론트엔드 이미지 리포지토리 | `swkoo` |
 | `OCI_USERNAME` | OCIR 로그인 ID (`tenancy/username`) | `axxxxdhlru6z/sungwoo.koo` |
 | `OCI_AUTH_TOKEN` | 사용자 Auth Token | `ocirt1...` |
 
@@ -20,17 +20,17 @@
 docker login icn.ocir.io -u "<namespace>/<username>" -p "<auth-token>"
 
 # 백엔드
-scripts/build-backend.sh icn.ocir.io/<namespace>/swkoo-backend:dev
-docker push icn.ocir.io/<namespace>/swkoo-backend:dev
+scripts/build-backend.sh nrt.ocir.io/<namespace>/swkoo:backend-test
+docker push nrt.ocir.io/<namespace>/swkoo:backend-test
 
 # 프론트엔드
-scripts/build-frontend.sh icn.ocir.io/<namespace>/swkoo-frontend:dev
-docker push icn.ocir.io/<namespace>/swkoo-frontend:dev
+scripts/build-frontend.sh nrt.ocir.io/<namespace>/swkoo:frontend-test
+docker push nrt.ocir.io/<namespace>/swkoo:frontend-test
 ```
 
 ## 이미지 태그 전략 제안
-- `latest` : 프로덕션에 배포된 최신 버전
-- Git SHA: `${GITHUB_SHA}`로 가변 버전을 추적
+- `backend-latest`, `frontend-latest` : 최신 백엔드/프론트엔드 이미지
+- `backend-${GITHUB_SHA}`, `frontend-${GITHUB_SHA}` : Git SHA 기반 버전
 - Git 태그/환경별 태그: `stage`, `prod`, `canary` 등 필요 시 추가
 
 ## 배포 파이프라인 연계
