@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to OCI registry
         env:
           OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
@@ -32,28 +38,24 @@ jobs:
           fi
           echo "$OCI_AUTH_TOKEN" | docker login "${REGISTRY_HOST}" --username "$OCI_USERNAME" --password-stdin
 
-      - name: Build backend image
+      - name: Build and push backend image
         run: |
-          export PATH="/usr/local/bin:$PATH"
           SHA_TAG="${GITHUB_SHA}"
-          ./scripts/build-backend.sh "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}"
-          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --file apps/backend/Dockerfile \
+            --tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}" \
+            --tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest" \
+            --push \
+            apps/backend
 
-      - name: Build frontend image
-        run: |
-          export PATH="/usr/local/bin:$PATH"
-          SHA_TAG="${GITHUB_SHA}"
-          ./scripts/build-frontend.sh "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}"
-          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"
-
-      - name: Push backend image
+      - name: Build and push frontend image
         run: |
           SHA_TAG="${GITHUB_SHA}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
-
-      - name: Push frontend image
-        run: |
-          SHA_TAG="${GITHUB_SHA}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --file apps/frontend/Dockerfile \
+            --tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}" \
+            --tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest" \
+            --push \
+            apps/frontend
