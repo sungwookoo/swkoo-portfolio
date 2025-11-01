@@ -19,7 +19,7 @@ spec:
         - name: ocir-credentials
       containers:
         - name: frontend
-          image: icn.ocir.io/tenancy/swkoo-frontend:latest
+          image: nrt.ocir.io/nrznn4yiltsz/swkoo-frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
