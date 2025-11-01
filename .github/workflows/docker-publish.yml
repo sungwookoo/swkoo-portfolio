@@ -7,12 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY_HOST: ${{ secrets.OCI_REGISTRY_HOST }} # 예: icn.ocir.io
+  REGISTRY_HOST: ${{ secrets.OCI_REGISTRY_HOST }}
   NAMESPACE: ${{ secrets.OCI_TENANCY_NAMESPACE }}
-  BACKEND_REPO: ${{ secrets.OCI_BACKEND_REPO }} # 예: swkoo-backend
-  FRONTEND_REPO: ${{ secrets.OCI_FRONTEND_REPO }} # 예: swkoo-frontend
-  BACKEND_TAG_PREFIX: backend
-  FRONTEND_TAG_PREFIX: frontend
+  BACKEND_REPO: ${{ secrets.OCI_BACKEND_REPO }}
+  FRONTEND_REPO: ${{ secrets.OCI_FRONTEND_REPO }}
 
 jobs:
   build:
@@ -37,29 +35,25 @@ jobs:
       - name: Build backend image
         run: |
           export PATH="/usr/local/bin:$PATH"
-          SHA_TAG="${BACKEND_TAG_PREFIX}-${GITHUB_SHA}"
-          LATEST_TAG="${BACKEND_TAG_PREFIX}-latest"
+          SHA_TAG="${GITHUB_SHA}"
           ./scripts/build-backend.sh "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}"
-          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${LATEST_TAG}"
+          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
 
       - name: Build frontend image
         run: |
           export PATH="/usr/local/bin:$PATH"
-          SHA_TAG="${FRONTEND_TAG_PREFIX}-${GITHUB_SHA}"
-          LATEST_TAG="${FRONTEND_TAG_PREFIX}-latest"
+          SHA_TAG="${GITHUB_SHA}"
           ./scripts/build-frontend.sh "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}"
-          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${LATEST_TAG}"
+          docker tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}" "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"
 
       - name: Push backend image
         run: |
-          SHA_TAG="${BACKEND_TAG_PREFIX}-${GITHUB_SHA}"
-          LATEST_TAG="${BACKEND_TAG_PREFIX}-latest"
+          SHA_TAG="${GITHUB_SHA}"
           docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${LATEST_TAG}"
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest"
 
       - name: Push frontend image
         run: |
-          SHA_TAG="${FRONTEND_TAG_PREFIX}-${GITHUB_SHA}"
-          LATEST_TAG="${FRONTEND_TAG_PREFIX}-latest"
+          SHA_TAG="${GITHUB_SHA}"
           docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}"
-          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${LATEST_TAG}"
+          docker push "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest"

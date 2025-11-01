@@ -9,13 +9,13 @@
 
 ## 선행 조건
 - OCI Container Registry 이미지
-  - `nrt.ocir.io/<namespace>/swkoo:backend-latest`
-  - `nrt.ocir.io/<namespace>/swkoo:frontend-latest`
+  - `nrt.ocir.io/<namespace>/swkoo/backend:latest`
+  - `nrt.ocir.io/<namespace>/swkoo/frontend:latest`
 - 이미지 풀 시크릿: `ocir-credentials`
   ```bash
   kubectl create secret docker-registry ocir-credentials \
     --namespace swkoo \
-    --docker-server=icn.ocir.io \
+    --docker-server=nrt.ocir.io \
     --docker-username='<namespace>/<username>' \
     --docker-password='<auth-token>'
   ```

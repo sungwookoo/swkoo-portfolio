@@ -5,7 +5,7 @@ Next.js(App Router) 기반의 프론트엔드로 `https://swkoo.kr`에 배포될
 ## 개발
 - `.env.local`에 `NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api` 설정
 - `npm install` 후 `npm run dev`로 개발 서버 실행
-- Docker 이미지: `scripts/build-frontend.sh nrt.ocir.io/<namespace>/swkoo:frontend-<tag>`
+- Docker 이미지: `scripts/build-frontend.sh nrt.ocir.io/<namespace>/swkoo/frontend:<tag>`
 
 ## Tailwind & 디자인
 - Tailwind CSS로 빠른 프로토타이핑
@@ -19,10 +19,10 @@ Next.js(App Router) 기반의 프론트엔드로 `https://swkoo.kr`에 배포될
 ## Docker 실행 예시
 ```bash
 # 이미지 빌드
-scripts/build-frontend.sh nrt.ocir.io/<namespace>/swkoo:frontend-local
+scripts/build-frontend.sh nrt.ocir.io/nrznn4yiltsz/swkoo/frontend:local
 
 # 런타임에 백엔드 API 주소가 필요합니다.
 docker run --rm -p 3000:3000 \
   -e NEXT_PUBLIC_API_BASE_URL=https://swkoo.kr/api \
-  nrt.ocir.io/<namespace>/swkoo:frontend-local
+  nrt.ocir.io/nrznn4yiltsz/swkoo/frontend:local
 ```
