@@ -20,7 +20,7 @@ spec:
       containers:
         - name: frontend
           image: nrt.ocir.io/nrznn4yiltsz/swkoo/frontend:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
