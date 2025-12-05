@@ -1,9 +1,12 @@
 import type { PipelinesEnvelope, PortfolioOverview } from './types';
 
 const defaultBaseUrl =
-  process.env.NODE_ENV === 'development' ? 'http://localhost:3000/api' : undefined;
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000/api'
+    : 'https://swkoo.kr/api');
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultBaseUrl;
+export const API_BASE_URL = defaultBaseUrl;
 
 export async function fetchOverview(): Promise<PortfolioOverview | null> {
   if (!API_BASE_URL) {
