@@ -15,10 +15,13 @@ const socialLinks = [
   },
 ];
 
-const siteLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/observatory', label: 'Observatory' },
-  { href: 'https://argocd.swkoo.kr', label: 'Argo CD', external: true },
+const internalLinks = [
+  { href: '/' as const, label: 'Home' },
+  { href: '/observatory' as const, label: 'Observatory' },
+];
+
+const externalSiteLinks = [
+  { href: 'https://argocd.swkoo.kr', label: 'Argo CD' },
 ];
 
 export function Footer() {
@@ -50,25 +53,26 @@ export function Footer() {
               Navigation
             </h3>
             <ul className="space-y-2">
-              {siteLinks.map((link) => (
+              {internalLinks.map((link) => (
                 <li key={link.href}>
-                  {link.external ? (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
-                    >
-                      {link.label} ↗
-                    </a>
-                  ) : (
-                    <Link
-                      href={link.href}
-                      className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
-                    >
-                      {link.label}
-                    </Link>
-                  )}
+                  <Link
+                    href={link.href}
+                    className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+              {externalSiteLinks.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
+                  >
+                    {link.label} ↗
+                  </a>
                 </li>
               ))}
             </ul>

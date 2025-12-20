@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
 const navItems = [
-  { href: '/', label: 'Home' },
-  { href: '/observatory', label: 'Observatory' },
+  { href: '/' as const, label: 'Home' },
+  { href: '/observatory' as const, label: 'Observatory' },
 ];
 
 const externalLinks = [
