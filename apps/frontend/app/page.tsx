@@ -1,9 +1,15 @@
-import clsx from 'clsx';
+import clsx from "clsx";
 
-import { fetchOverview, fetchPipelines, fetchWorkflows } from '@/lib/api';
-import { PipelineCard } from '@/components/PipelineCard';
+import { fetchOverview, fetchPipelines, fetchWorkflows } from "@/lib/api";
+import { PipelineCard } from "@/components/PipelineCard";
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionTitle({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <header className="mb-6 space-y-2">
       <h2 className="text-2xl font-semibold text-slate-50">{title}</h2>
@@ -18,12 +24,12 @@ function formatTimestamp(timestamp: string | null | undefined) {
   }
 
   try {
-    return new Intl.DateTimeFormat('ko-KR', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
+    return new Intl.DateTimeFormat("ko-KR", {
+      dateStyle: "medium",
+      timeStyle: "short",
     }).format(new Date(timestamp));
   } catch (error) {
-    console.warn('Failed to format timestamp', error);
+    console.warn("Failed to format timestamp", error);
     return timestamp;
   }
 }
@@ -31,20 +37,28 @@ function formatTimestamp(timestamp: string | null | undefined) {
 function buildLegendItem(colorClass: string, label: string) {
   return (
     <li key={label} className="flex items-center gap-2">
-      <span className={clsx('inline-flex size-2 rounded-full', colorClass)}></span>
+      <span
+        className={clsx("inline-flex size-2 rounded-full", colorClass)}
+      ></span>
       {label}
     </li>
   );
 }
 
 export default async function Home() {
-  const [overview, pipelinesEnvelope] = await Promise.all([fetchOverview(), fetchPipelines()]);
+  const [overview, pipelinesEnvelope] = await Promise.all([
+    fetchOverview(),
+    fetchPipelines(),
+  ]);
   const pipelinesConfigured = pipelinesEnvelope.configured;
   const pipelines = pipelinesEnvelope.pipelines;
   const pipelinesFetchedAt = formatTimestamp(pipelinesEnvelope.fetchedAt);
 
   // Fetch workflows for each pipeline
-  const workflowsMap = new Map<string, Awaited<ReturnType<typeof fetchWorkflows>>>();
+  const workflowsMap = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchWorkflows>>
+  >();
   if (pipelinesConfigured && pipelines.length > 0) {
     const workflowsResults = await Promise.all(
       pipelines.map((p) => fetchWorkflows(p.name, { perPage: 5 }))
@@ -57,20 +71,31 @@ export default async function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-12 px-6 py-16">
       <section className="space-y-6 rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-950/40 p-10 shadow-xl shadow-slate-900/60">
-        <p className="text-sm uppercase tracking-[0.4rem] text-slate-500">Sungwoo Koo</p>
+        <p className="text-sm uppercase tracking-[0.4rem] text-slate-500">
+          Sungwoo Koo
+        </p>
         <h1 className="text-4xl font-bold text-slate-50 sm:text-5xl">
           GitOps-first Infrastructure Playground
         </h1>
         <p className="max-w-2xl text-lg text-slate-300">
-          swkoo.kr은 개인 K3s 클러스터 위에서 GitOps 파이프라인을 실험하고 전시하기 위한 포트폴리오
-          공간입니다. Argo CD, Portainer, Grafana, 사설 Registry로 구성된 제어면(Control Plane)을
-          통해 애플리케이션을 선언형으로 운영합니다.
+          swkoo.kr은 개인 K3s 클러스터 위에서 GitOps 파이프라인을 실험하고
+          전시하기 위한 포트폴리오 공간입니다. Argo CD, Portainer, Grafana, 사설
+          Registry로 구성된 제어면(Control Plane)을 통해 애플리케이션을
+          선언형으로 운영합니다.
         </p>
         <div className="flex flex-wrap gap-3 text-sm text-slate-400">
-          <span className="rounded-full border border-slate-700 px-3 py-1">K3s · OCI</span>
-          <span className="rounded-full border border-slate-700 px-3 py-1">GitOps · Argo CD</span>
-          <span className="rounded-full border border-slate-700 px-3 py-1">Observability</span>
-          <span className="rounded-full border border-slate-700 px-3 py-1">Infrastructure as Code</span>
+          <span className="rounded-full border border-slate-700 px-3 py-1">
+            K3s · OCI
+          </span>
+          <span className="rounded-full border border-slate-700 px-3 py-1">
+            GitOps · Argo CD
+          </span>
+          <span className="rounded-full border border-slate-700 px-3 py-1">
+            Observability
+          </span>
+          <span className="rounded-full border border-slate-700 px-3 py-1">
+            Infrastructure as Code
+          </span>
         </div>
       </section>
 
@@ -85,24 +110,33 @@ export default async function Home() {
               <div>
                 <dt className="font-semibold text-slate-200">Cluster</dt>
                 <dd className="mt-1 text-slate-400">
-                  {overview.infrastructure.cluster.distribution} @ {overview.infrastructure.cluster.location}
+                  {overview.infrastructure.cluster.distribution} @{" "}
+                  {overview.infrastructure.cluster.location}
                 </dd>
               </div>
               <div>
                 <dt className="font-semibold text-slate-200">GitOps Tooling</dt>
                 <dd className="mt-1 flex flex-wrap gap-2">
                   {overview.infrastructure.cluster.gitOpsTooling.map((tool) => (
-                    <span key={tool} className="rounded-md bg-slate-800 px-2 py-1">
+                    <span
+                      key={tool}
+                      className="rounded-md bg-slate-800 px-2 py-1"
+                    >
                       {tool}
                     </span>
                   ))}
                 </dd>
               </div>
               <div>
-                <dt className="font-semibold text-slate-200">Control Plane Apps</dt>
+                <dt className="font-semibold text-slate-200">
+                  Control Plane Apps
+                </dt>
                 <dd className="mt-1 grid gap-2 sm:grid-cols-2">
                   {overview.infrastructure.controlPlane.map((app) => (
-                    <span key={app} className="rounded-md border border-slate-800 bg-slate-950 px-2 py-1">
+                    <span
+                      key={app}
+                      className="rounded-md border border-slate-800 bg-slate-950 px-2 py-1"
+                    >
                       {app}
                     </span>
                   ))}
@@ -117,13 +151,21 @@ export default async function Home() {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
-          <SectionTitle title="GitOps Vision" subtitle="swkoo.kr을 위한 파이프라인 로드맵" />
+          <SectionTitle
+            title="GitOps Vision"
+            subtitle="swkoo.kr을 위한 파이프라인 로드맵"
+          />
           {overview ? (
             <div className="space-y-4 text-sm text-slate-300">
-              <p className="text-slate-400">{overview.gitopsVision.description}</p>
+              <p className="text-slate-400">
+                {overview.gitopsVision.description}
+              </p>
               <ol className="space-y-3 text-slate-200">
                 {overview.gitopsVision.roadmap.map((item) => (
-                  <li key={item} className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
+                  <li
+                    key={item}
+                    className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3"
+                  >
                     {item}
                   </li>
                 ))}
@@ -147,38 +189,46 @@ export default async function Home() {
             <p className="font-semibold text-slate-200">Status Legend</p>
             <div className="mt-3 space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">Pipeline</p>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  Pipeline
+                </p>
                 <ul className="mt-2 space-y-2 text-slate-300">
                   {[
-                    buildLegendItem('bg-emerald-400', 'Success'),
-                    buildLegendItem('bg-rose-400', 'Failure'),
-                    buildLegendItem('bg-sky-400', 'Running'),
-                    buildLegendItem('bg-slate-500', 'Pending')
+                    buildLegendItem("bg-emerald-400", "Success"),
+                    buildLegendItem("bg-rose-400", "Failure"),
+                    buildLegendItem("bg-sky-400", "Running"),
+                    buildLegendItem("bg-slate-500", "Pending"),
                   ]}
                 </ul>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">Sync</p>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  Sync
+                </p>
                 <ul className="mt-2 space-y-2 text-slate-300">
                   {[
-                    buildLegendItem('bg-emerald-400/90', 'Synced'),
-                    buildLegendItem('bg-amber-400/90', 'OutOfSync')
+                    buildLegendItem("bg-emerald-400/90", "Synced"),
+                    buildLegendItem("bg-amber-400/90", "OutOfSync"),
                   ]}
                 </ul>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">Health</p>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  Health
+                </p>
                 <ul className="mt-2 space-y-2 text-slate-300">
                   {[
-                    buildLegendItem('bg-emerald-400/90', 'Healthy'),
-                    buildLegendItem('bg-amber-400/90', 'Degraded'),
-                    buildLegendItem('bg-rose-400/90', 'Missing')
+                    buildLegendItem("bg-emerald-400/90", "Healthy"),
+                    buildLegendItem("bg-amber-400/90", "Degraded"),
+                    buildLegendItem("bg-rose-400/90", "Missing"),
                   ]}
                 </ul>
               </div>
             </div>
             {pipelinesFetchedAt ? (
-              <p className="mt-4 text-xs text-slate-500">최근 갱신: {pipelinesFetchedAt}</p>
+              <p className="mt-4 text-xs text-slate-500">
+                최근 갱신: {pipelinesFetchedAt}
+              </p>
             ) : null}
           </div>
 
@@ -212,7 +262,7 @@ export default async function Home() {
                       repoUrl: null,
                       workflows: [],
                       runs: [],
-                      pagination: { page: 1, perPage: 10, total: 0 }
+                      pagination: { page: 1, perPage: 10, total: 0 },
                     }
                   }
                 />

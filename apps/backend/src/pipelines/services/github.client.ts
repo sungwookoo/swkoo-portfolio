@@ -134,15 +134,26 @@ export class GitHubClient {
       runDurationSeconds = Math.round((endTime - startTime) / 1000);
     }
 
-    const conclusion = run.conclusion as WorkflowRun['conclusion'];
+    // Map GitHub conclusion to our simplified conclusion type
+    let conclusion: WorkflowRun['conclusion'] = null;
+    if (run.conclusion) {
+      if (run.conclusion === 'success') {
+        conclusion = 'success';
+      } else if (run.conclusion === 'cancelled') {
+        conclusion = 'cancelled';
+      } else if (run.conclusion === 'skipped') {
+        conclusion = 'skipped';
+      } else {
+        // neutral, timed_out, action_required, failure all map to failure
+        conclusion = 'failure';
+      }
+    }
 
     return {
       id: run.id,
       name: run.name,
       status: run.status,
-      conclusion: conclusion === 'neutral' || conclusion === 'timed_out' || conclusion === 'action_required'
-        ? 'failure'
-        : conclusion,
+      conclusion,
       headSha: run.head_sha,
       headBranch: run.head_branch,
       event: run.event,
