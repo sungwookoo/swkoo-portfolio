@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 
-import { fetchOverview, fetchPipelines } from '@/lib/api';
+import { fetchOverview, fetchPipelines, fetchWorkflows } from '@/lib/api';
+import { PipelineCard } from '@/components/PipelineCard';
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -27,23 +28,6 @@ function formatTimestamp(timestamp: string | null | undefined) {
   }
 }
 
-function resolveBadgeClass(status: string, type: 'sync' | 'health'): string {
-  const normalized = status.toLowerCase();
-
-  if (type === 'sync') {
-    if (normalized === 'synced') return 'bg-emerald-400/90 text-emerald-950';
-    if (normalized === 'outofsync') return 'bg-amber-400/90 text-amber-950';
-    if (normalized === 'unknown') return 'bg-slate-500/80 text-slate-900';
-    return 'bg-sky-400/90 text-sky-950';
-  }
-
-  if (normalized === 'healthy') return 'bg-emerald-400/90 text-emerald-950';
-  if (normalized === 'degraded') return 'bg-amber-400/90 text-amber-950';
-  if (normalized === 'progressing') return 'bg-sky-400/90 text-sky-950';
-  if (normalized === 'missing') return 'bg-rose-400/90 text-rose-950';
-  return 'bg-slate-500/80 text-slate-900';
-}
-
 function buildLegendItem(colorClass: string, label: string) {
   return (
     <li key={label} className="flex items-center gap-2">
@@ -58,6 +42,17 @@ export default async function Home() {
   const pipelinesConfigured = pipelinesEnvelope.configured;
   const pipelines = pipelinesEnvelope.pipelines;
   const pipelinesFetchedAt = formatTimestamp(pipelinesEnvelope.fetchedAt);
+
+  // Fetch workflows for each pipeline
+  const workflowsMap = new Map<string, Awaited<ReturnType<typeof fetchWorkflows>>>();
+  if (pipelinesConfigured && pipelines.length > 0) {
+    const workflowsResults = await Promise.all(
+      pipelines.map((p) => fetchWorkflows(p.name, { perPage: 5 }))
+    );
+    pipelines.forEach((p, i) => {
+      workflowsMap.set(p.name, workflowsResults[i]);
+    });
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-12 px-6 py-16">
@@ -144,21 +139,30 @@ export default async function Home() {
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
         <SectionTitle
-          title="Pipeline Observatory (MVP)"
-          subtitle="Argo CD Application 동기화 상태를 연동해 실시간에 가까운 파이프라인 타임라인을 만들 예정입니다."
+          title="Pipeline Observatory"
+          subtitle="Commit → Build → Push → Sync → Deploy 전체 파이프라인을 추적합니다."
         />
-        <div className="grid gap-6 md:grid-cols-[minmax(0,240px),1fr]">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,200px),1fr]">
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
             <p className="font-semibold text-slate-200">Status Legend</p>
             <div className="mt-3 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">Pipeline</p>
+                <ul className="mt-2 space-y-2 text-slate-300">
+                  {[
+                    buildLegendItem('bg-emerald-400', 'Success'),
+                    buildLegendItem('bg-rose-400', 'Failure'),
+                    buildLegendItem('bg-sky-400', 'Running'),
+                    buildLegendItem('bg-slate-500', 'Pending')
+                  ]}
+                </ul>
+              </div>
               <div>
                 <p className="text-xs uppercase tracking-widest text-slate-500">Sync</p>
                 <ul className="mt-2 space-y-2 text-slate-300">
                   {[
                     buildLegendItem('bg-emerald-400/90', 'Synced'),
-                    buildLegendItem('bg-amber-400/90', 'OutOfSync'),
-                    buildLegendItem('bg-sky-400/90', 'Progressing'),
-                    buildLegendItem('bg-slate-500/80', 'Unknown')
+                    buildLegendItem('bg-amber-400/90', 'OutOfSync')
                   ]}
                 </ul>
               </div>
@@ -168,7 +172,6 @@ export default async function Home() {
                   {[
                     buildLegendItem('bg-emerald-400/90', 'Healthy'),
                     buildLegendItem('bg-amber-400/90', 'Degraded'),
-                    buildLegendItem('bg-sky-400/90', 'Progressing'),
                     buildLegendItem('bg-rose-400/90', 'Missing')
                   ]}
                 </ul>
@@ -179,9 +182,9 @@ export default async function Home() {
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-sm text-slate-300">
+          <div className="space-y-6">
             {!pipelinesConfigured ? (
-              <div className="space-y-3 text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-800 p-6 text-sm text-slate-400">
                 <p>
                   아직 Argo CD 자격 증명이 설정되지 않았습니다. 백엔드 환경 변수
                   <code className="mx-1 rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
@@ -193,85 +196,27 @@ export default async function Home() {
                   </code>
                   을 지정하면 파이프라인이 표시됩니다.
                 </p>
-                <p className="text-xs text-slate-500">
-                  (Terraform/Argo CD에서 서비스 계정을 발급한 뒤 Kubernetes Secret로 주입하세요.)
-                </p>
               </div>
             ) : pipelines.length === 0 ? (
-              <div className="space-y-3 text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-800 p-6 text-sm text-slate-400">
                 <p>아직 추적 중인 Argo CD Application이 없습니다.</p>
-                <p className="text-xs text-slate-500">
-                  첫 애플리케이션을 GitOps 파이프라인에 연결하면 여기에서 실시간 상태를 볼 수 있습니다.
-                </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {pipelines.map((pipeline) => (
-                  <article
-                    key={pipeline.name}
-                    className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-4 shadow-inner shadow-slate-900/40"
-                  >
-                    <header className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-base font-semibold text-slate-100">{pipeline.name}</h3>
-                        <p className="text-xs uppercase tracking-widest text-slate-500">
-                          {pipeline.project}
-                          {pipeline.namespace ? ` · ${pipeline.namespace}` : ''}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span
-                          className={clsx(
-                            'rounded-full px-3 py-1 font-medium uppercase tracking-wide',
-                            resolveBadgeClass(pipeline.syncStatus, 'sync')
-                          )}
-                        >
-                          Sync: {pipeline.syncStatus}
-                        </span>
-                        <span
-                          className={clsx(
-                            'rounded-full px-3 py-1 font-medium uppercase tracking-wide',
-                            resolveBadgeClass(pipeline.healthStatus, 'health')
-                          )}
-                        >
-                          Health: {pipeline.healthStatus}
-                        </span>
-                      </div>
-                    </header>
-                    <dl className="mt-4 grid gap-3 text-xs text-slate-400 sm:grid-cols-2">
-                      <div>
-                        <dt className="font-semibold text-slate-300">Revision</dt>
-                        <dd className="mt-1 font-mono text-[11px] text-slate-400">
-                          {pipeline.revision ?? 'N/A'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-semibold text-slate-300">Target</dt>
-                        <dd className="mt-1 text-slate-400">
-                          {pipeline.targetRevision ?? 'HEAD'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-semibold text-slate-300">Last Synced</dt>
-                        <dd className="mt-1 text-slate-400">
-                          {formatTimestamp(pipeline.lastSyncedAt) ?? '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-semibold text-slate-300">Last Deployed</dt>
-                        <dd className="mt-1 text-slate-400">
-                          {formatTimestamp(pipeline.lastDeployedAt) ?? '—'}
-                        </dd>
-                      </div>
-                    </dl>
-                    {pipeline.repoUrl ? (
-                      <p className="mt-4 text-xs text-slate-500">
-                        Repo: <span className="font-mono text-slate-300">{pipeline.repoUrl}</span>
-                      </p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
+              pipelines.map((pipeline) => (
+                <PipelineCard
+                  key={pipeline.name}
+                  pipeline={pipeline}
+                  workflowsEnvelope={
+                    workflowsMap.get(pipeline.name) ?? {
+                      configured: false,
+                      repoUrl: null,
+                      workflows: [],
+                      runs: [],
+                      pagination: { page: 1, perPage: 10, total: 0 }
+                    }
+                  }
+                />
+              ))
             )}
           </div>
         </div>

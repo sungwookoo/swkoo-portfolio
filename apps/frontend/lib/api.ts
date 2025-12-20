@@ -1,4 +1,4 @@
-import type { PipelinesEnvelope, PortfolioOverview } from './types';
+import type { PipelinesEnvelope, PortfolioOverview, WorkflowsEnvelope } from './types';
 
 const defaultBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -66,6 +66,63 @@ export async function fetchPipelines(): Promise<PipelinesEnvelope> {
       configured: false,
       fetchedAt: null,
       pipelines: []
+    };
+  }
+}
+
+export interface FetchWorkflowsOptions {
+  workflow?: string;
+  page?: number;
+  perPage?: number;
+}
+
+export async function fetchWorkflows(
+  pipelineName: string,
+  options: FetchWorkflowsOptions = {}
+): Promise<WorkflowsEnvelope> {
+  if (!API_BASE_URL) {
+    return {
+      configured: false,
+      repoUrl: null,
+      workflows: [],
+      runs: [],
+      pagination: { page: 1, perPage: 10, total: 0 }
+    };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (options.workflow) params.set('workflow', options.workflow);
+    if (options.page) params.set('page', String(options.page));
+    if (options.perPage) params.set('per_page', String(options.perPage));
+
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/workflows${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to load workflows', response.statusText);
+      return {
+        configured: false,
+        repoUrl: null,
+        workflows: [],
+        runs: [],
+        pagination: { page: 1, perPage: 10, total: 0 }
+      };
+    }
+
+    return (await response.json()) as WorkflowsEnvelope;
+  } catch (error) {
+    console.warn('Workflows request failed', error);
+    return {
+      configured: false,
+      repoUrl: null,
+      workflows: [],
+      runs: [],
+      pagination: { page: 1, perPage: 10, total: 0 }
     };
   }
 }

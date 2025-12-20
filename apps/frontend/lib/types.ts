@@ -36,3 +36,30 @@ export interface PipelinesEnvelope {
   fetchedAt: string | null;
   pipelines: PipelineSummary[];
 }
+
+// GitHub Workflow types
+export interface WorkflowRun {
+  id: number;
+  name: string;
+  status: 'queued' | 'in_progress' | 'completed';
+  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | null;
+  headSha: string;
+  headBranch: string;
+  event: string;
+  createdAt: string;
+  updatedAt: string;
+  runDurationSeconds: number | null;
+  htmlUrl: string;
+}
+
+export interface WorkflowsEnvelope {
+  configured: boolean;
+  repoUrl: string | null;
+  workflows: string[];
+  runs: WorkflowRun[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+  };
+}

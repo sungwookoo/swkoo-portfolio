@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { githubConfig } from './config/github.config';
 import { pipelinesConfig } from './config/pipelines.config';
 
 import { HealthController } from './health/health.controller';
@@ -13,7 +14,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [pipelinesConfig]
+      load: [pipelinesConfig, githubConfig]
     }),
     PipelinesModule
   ],

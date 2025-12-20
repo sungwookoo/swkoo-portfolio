@@ -7,14 +7,23 @@ import {
 } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 
+import { githubConfig } from '../config/github.config';
 import { pipelinesConfig } from '../config/pipelines.config';
 import type { ArgoCdApplication } from './types/argo-cd.types';
+import type { WorkflowsEnvelope } from './types/github.types';
 import type { PipelineSummary, PipelinesEnvelope } from './pipelines.types';
 import { ArgoCdClient } from './services/argo-cd.client';
+import { GitHubClient } from './services/github.client';
 
 interface PipelinesCache {
   fetchedAt: number;
   data: PipelineSummary[];
+}
+
+interface GetWorkflowsOptions {
+  workflow?: string;
+  page?: number;
+  perPage?: number;
 }
 
 @Injectable()
@@ -24,8 +33,11 @@ export class PipelinesService {
 
   constructor(
     private readonly argoCdClient: ArgoCdClient,
+    private readonly githubClient: GitHubClient,
     @Inject(pipelinesConfig.KEY)
-    private readonly config: ConfigType<typeof pipelinesConfig>
+    private readonly config: ConfigType<typeof pipelinesConfig>,
+    @Inject(githubConfig.KEY)
+    private readonly githubCfg: ConfigType<typeof githubConfig>
   ) {}
 
   async getPipelines(): Promise<PipelinesEnvelope> {
@@ -75,6 +87,72 @@ export class PipelinesService {
     }
 
     return this.toPipelineSummary(application);
+  }
+
+  async getWorkflows(name: string, options: GetWorkflowsOptions = {}): Promise<WorkflowsEnvelope> {
+    if (!this.githubClient.isConfigured()) {
+      return {
+        configured: false,
+        repoUrl: null,
+        workflows: [],
+        runs: [],
+        pagination: { page: 1, perPage: 10, total: 0 }
+      };
+    }
+
+    // Get pipeline to extract repoUrl
+    const pipeline = await this.getPipeline(name);
+    const repoUrl = pipeline.repoUrl;
+
+    if (!repoUrl) {
+      this.logger.warn(`Pipeline ${name} does not have a repository URL`);
+      return {
+        configured: true,
+        repoUrl: null,
+        workflows: [],
+        runs: [],
+        pagination: { page: 1, perPage: 10, total: 0 }
+      };
+    }
+
+    // Extract owner and repo from repoUrl
+    const { owner, repo } = this.parseGitHubRepoUrl(repoUrl);
+
+    if (!owner || !repo) {
+      this.logger.warn(`Could not parse GitHub repository from URL: ${repoUrl}`);
+      return {
+        configured: true,
+        repoUrl,
+        workflows: [],
+        runs: [],
+        pagination: { page: 1, perPage: 10, total: 0 }
+      };
+    }
+
+    return this.githubClient.fetchWorkflows({
+      owner: this.githubCfg.owner ?? owner,
+      repo: this.githubCfg.repo ?? repo,
+      workflow: options.workflow,
+      page: options.page,
+      perPage: options.perPage
+    });
+  }
+
+  private parseGitHubRepoUrl(url: string): { owner: string | null; repo: string | null } {
+    // Handle both HTTPS and SSH URLs
+    // https://github.com/owner/repo.git
+    // git@github.com:owner/repo.git
+    const httpsMatch = url.match(/github\.com\/([^/]+)\/([^/.]+)/);
+    if (httpsMatch) {
+      return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    }
+
+    const sshMatch = url.match(/github\.com:([^/]+)\/([^/.]+)/);
+    if (sshMatch) {
+      return { owner: sshMatch[1], repo: sshMatch[2] };
+    }
+
+    return { owner: null, repo: null };
   }
 
   private toPipelineSummary(application: ArgoCdApplication): PipelineSummary {
