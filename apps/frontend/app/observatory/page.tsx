@@ -3,6 +3,7 @@ import clsx from 'clsx';
 
 import { fetchPipelines, fetchWorkflows } from '@/lib/api';
 import { PipelineCard } from '@/components/PipelineCard';
+import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
 
 export const metadata: Metadata = {
   title: 'Observatory — swkoo.kr',
@@ -72,6 +73,17 @@ export default async function ObservatoryPage() {
             </p>
           </div>
         </div>
+      </section>
+
+      {/* Architecture Section */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-slate-100">System Architecture</h2>
+          <p className="text-sm text-slate-400">
+            OCI IaaS 기반 Self-managed K3s 클러스터의 전체 구조와 데이터 흐름
+          </p>
+        </div>
+        <ArchitectureDiagram />
       </section>
 
       {/* Stats Bar */}
