@@ -23,24 +23,35 @@
    - `GET /health` 헬스체크
    - `GET /overview` : 인프라 설명 반환(정적 데이터로 시작)
 
-### Phase 2 – GitOps 이벤트 수집 MVP
+### Phase 2 – GitOps 이벤트 수집 MVP ✅ 완료
 1. **Argo CD 연동**
    - ✅ NestJS PipelinesModule + Argo CD API 클라이언트 (`GET /api/pipelines`, `GET /api/pipelines/:name`)
-   - ☐ 서비스어카운트/토큰 배포 및 Kubernetes Secret 관리 자동화.
-2. **백엔드 저장소**
+   - ✅ 서비스어카운트/토큰 배포 및 Kubernetes Secret 관리.
+2. **GitHub Actions 연동**
+   - ✅ GitHub API 클라이언트 구현 (`GET /api/pipelines/:name/workflows`)
+   - ✅ 워크플로 실행 목록 조회 및 상태 표시.
+3. **백엔드 저장소**
    - ✅ 인메모리 캐시 + TTL 기본 구현 (환경변수 `PIPELINES_CACHE_TTL`).
    - ☐ Redis/Mongo 등 외부 스토리지 도입 검토.
-3. **프론트엔드 시각화**
+4. **프론트엔드 시각화**
    - ✅ Pipeline Observatory 섹션에서 상태 배지/타임라인 카드 표시.
+   - ✅ GitHub Actions 워크플로 실행 목록 표시.
+   - ✅ Mermaid 아키텍처 다이어그램 (3가지 뷰).
    - ☐ 실시간 갱신(폴링 → WebSocket/SSE) 도입.
+5. **알람 시스템** (Phase 2.5)
+   - ✅ Alertmanager → Discord Webhook 연동.
+   - ✅ swkoo namespace 커스텀 알람 규칙 (5개).
+   - ☐ Observatory에 활성 알람 표시 섹션 추가.
 
-### Phase 3 – 실시간/확장
+### Phase 3 – 실시간/확장 🚧 진행 예정
 1. **실시간 이벤트**
-   - Argo CD Webhook → NestJS(또는 별도 이벤트 게이트웨이) → WebSocket/SSE 전송.
-2. **여러 CI/CD 소스 통합**
-   - GitHub Actions, Portainer Webhook 등 확장.
+   - ☐ Argo CD Webhook → NestJS → WebSocket/SSE 전송.
+   - ☐ GitHub Actions Webhook 연동.
+2. **Observability 연동**
+   - ☐ Alertmanager API → Observatory 활성 알람 표시.
+   - ☐ Grafana 대시보드 임베드 또는 스크린샷 연동.
 3. **히스토리/통계**
-   - Mongo/Postgres 등 영속 저장소 도입 후 배포 히스토리 시각화.
+   - ☐ Mongo/Postgres 등 영속 저장소 도입 후 배포 히스토리 시각화.
 
 ## 기술 스택 요약
 - **Backend**: NestJS, TypeScript, Axios(Argo CD API), class-validator 등 공통 Nest 라이브러리.
