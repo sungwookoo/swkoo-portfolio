@@ -16,19 +16,62 @@ function SectionTitle({
   );
 }
 
-const skills = [
+const responsibilities = [
+  {
+    category: "플랫폼 운영 책임",
+    items: [
+      "OCI VM 수명주기 관리와 네트워크/보안 정책 직접 설계",
+      "Terraform으로 변경 이력 관리 및 재현 가능한 인프라 운영",
+      "OCI Container Registry 운영 및 이미지 정책 관리",
+    ],
+  },
+  {
+    category: "클러스터 운영",
+    items: [
+      "k3s 설치, 업그레이드, 장애 대응까지 단일 운영 기준 유지",
+      "Ingress/TLS, 네임스페이스, 권한 구조를 직접 설계",
+      "리소스 제약 환경에서 스케줄링과 용량 계획 최적화",
+    ],
+  },
+  {
+    category: "배포 흐름 표준화",
+    items: [
+      "GitHub Actions 기반 CI 표준 운영",
+      "Argo CD로 배포 동기화와 롤백 경로 확보",
+      "Kustomize로 환경별 선언형 배포 정의",
+    ],
+  },
+  {
+    category: "관측/알림 운영",
+    items: [
+      "Prometheus/Grafana 지표 기준 수립",
+      "Alertmanager → Discord 알람 정책 운영",
+      "알람 이후 대응 기준과 롤백 판단 유지",
+    ],
+  },
+];
+
+const environmentDefinition = [
   {
     category: "Infrastructure",
-    items: ["Kubernetes", "K3s", "Terraform", "Docker"],
+    used: "OCI Compute (VM), OCI Container Registry",
+    unused: "-",
   },
   {
-    category: "GitOps & CI/CD",
-    items: ["Argo CD", "GitHub Actions", "Helm", "Kustomize"],
+    category: "Container Platform",
+    used: "Kubernetes (k3s, self-managed)",
+    unused: "Managed Kubernetes (OKE/EKS/GKE)",
   },
-  { category: "Cloud", items: ["OCI", "AWS", "GCP"] },
-  { category: "Observability", items: ["Prometheus", "Grafana", "Loki"] },
-  { category: "Backend", items: ["NestJS", "Node.js", "Python"] },
-  { category: "Frontend", items: ["React", "Next.js", "TypeScript"] },
+  {
+    category: "CI/CD",
+    used: "GitHub Actions (CI), Argo CD (CD, GitOps)",
+    unused: "클라우드 네이티브 CI 서비스",
+  },
+  {
+    category: "Observability",
+    used: "Prometheus, Grafana, Alertmanager",
+    unused: "클라우드 네이티브 모니터링",
+  },
 ];
 
 export default async function Home() {
@@ -48,21 +91,33 @@ export default async function Home() {
       <section className="space-y-8">
         <div className="space-y-6">
           <p className="text-sm font-medium uppercase tracking-[0.3rem] text-emerald-400">
-            DevOps Engineer
+            운영 플랫폼
           </p>
-          <h1 className="text-4xl font-bold leading-tight text-slate-50 sm:text-5xl lg:text-6xl">
-            안녕하세요,
-            <br />
-            <span className="bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">
-              구성우
-            </span>
-            입니다.
-          </h1>
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold leading-tight text-slate-50 sm:text-5xl lg:text-6xl">
+              Observatory
+            </h1>
+            <p className="text-xl font-semibold text-slate-200">
+              프로덕션급 DevOps 운영 플랫폼
+            </p>
+          </div>
           <p className="max-w-2xl text-lg leading-relaxed text-slate-300">
-            GitOps와 Infrastructure as Code를 통해 안정적이고 확장 가능한
-            인프라를 구축합니다. 개인 K3s 클러스터에서 실제 운영 환경을
-            실험하고, 모든 과정을 투명하게 공유합니다.
+            GitOps 기반 배포 흐름과 런타임 관측을 연결해 단일 운영자가
+            서비스의 상태를 빠르게 판단할 수 있는 운영 신호를 만든다.
           </p>
+          <ul className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+            {[
+              "OCI IaaS 기반",
+              "Self-managed Kubernetes (k3s) 운영",
+              "Managed Kubernetes / Cloud Monitoring 미사용",
+              "단일 운영자 기준 설계",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <span className="mt-2 size-1.5 rounded-full bg-emerald-400" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* CTA Buttons */}
@@ -72,7 +127,7 @@ export default async function Home() {
             className="group flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-all hover:bg-emerald-400"
           >
             <span className="text-lg">🐟</span>
-            <span>Live Observatory</span>
+            <span>Observatory 대시보드</span>
             <span className="transition-transform group-hover:translate-x-1">
               →
             </span>
@@ -90,7 +145,7 @@ export default async function Home() {
             href="mailto:sungwookoo.dev@gmail.com"
             className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/50 px-6 py-3 font-medium text-slate-200 transition-all hover:border-slate-600 hover:bg-slate-800"
           >
-            Contact
+            문의
           </a>
         </div>
       </section>
@@ -105,10 +160,10 @@ export default async function Home() {
               </div>
               <div>
                 <p className="text-lg font-semibold text-slate-100">
-                  {healthyCount}/{totalPipelines} Pipelines Healthy
+                  {healthyCount}/{totalPipelines} 파이프라인 정상
                 </p>
                 <p className="text-sm text-slate-400">
-                  실시간으로 운영 중인 파이프라인 상태
+                  운영 중인 파이프라인 동기화/헬스 상태
                 </p>
               </div>
             </div>
@@ -116,37 +171,65 @@ export default async function Home() {
               href="/observatory"
               className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
             >
-              View Observatory →
+              Observatory 보기 →
             </Link>
           </div>
         </section>
       )}
 
-      {/* Skills Section */}
+      {/* Environment Definition */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <SectionTitle
+          title="운영 환경 정의"
+          subtitle="직접 책임지는 영역과 의도적으로 배제한 영역을 명확히 구분"
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-3 py-2">카테고리</th>
+                <th className="px-3 py-2">사용 기술</th>
+                <th className="px-3 py-2">미사용 기술</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {environmentDefinition.map((row) => (
+                <tr key={row.category} className="align-top">
+                  <td className="px-3 py-3 font-semibold text-slate-200">
+                    {row.category}
+                  </td>
+                  <td className="px-3 py-3 text-slate-300">{row.used}</td>
+                  <td className="px-3 py-3 text-slate-400">{row.unused}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Responsibilities Section */}
       <section>
         <SectionTitle
-          title="Skills & Technologies"
-          subtitle="인프라 구축과 DevOps에 사용하는 기술 스택"
+          title="운영 책임 범위"
+          subtitle="플랫폼 운영 관점에서 직접 설계·운영하는 영역"
         />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {skills.map((skill) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          {responsibilities.map((scope) => (
             <div
-              key={skill.category}
+              key={scope.category}
               className="rounded-xl border border-slate-800 bg-slate-900/60 p-5"
             >
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-400">
-                {skill.category}
+                {scope.category}
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {skill.items.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-md bg-slate-800 px-2.5 py-1 text-sm text-slate-300"
-                  >
-                    {item}
-                  </span>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {scope.items.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-1.5 size-1.5 rounded-full bg-emerald-400/80" />
+                    <span>{item}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
@@ -156,20 +239,20 @@ export default async function Home() {
       <section className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
           <SectionTitle
-            title="Infrastructure Overview"
-            subtitle="Terraform + OCI + K3s로 구축한 홈 랩 환경"
+            title="운영 플랫폼 개요"
+            subtitle="Terraform + OCI + k3s 기반으로 직접 운영"
           />
           {overview ? (
             <dl className="space-y-4 text-sm text-slate-300">
               <div>
-                <dt className="font-semibold text-slate-200">Cluster</dt>
+                <dt className="font-semibold text-slate-200">클러스터</dt>
                 <dd className="mt-1 text-slate-400">
                   {overview.infrastructure.cluster.distribution} @{" "}
                   {overview.infrastructure.cluster.location}
                 </dd>
               </div>
               <div>
-                <dt className="font-semibold text-slate-200">GitOps Tooling</dt>
+                <dt className="font-semibold text-slate-200">GitOps 도구</dt>
                 <dd className="mt-1 flex flex-wrap gap-2">
                   {overview.infrastructure.cluster.gitOpsTooling.map((tool) => (
                     <span
@@ -183,7 +266,7 @@ export default async function Home() {
               </div>
               <div>
                 <dt className="font-semibold text-slate-200">
-                  Control Plane Apps
+                  운영 플랫폼 앱
                 </dt>
                 <dd className="mt-1 grid gap-2 sm:grid-cols-2">
                   {overview.infrastructure.controlPlane.map((app) => (
@@ -206,8 +289,8 @@ export default async function Home() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
           <SectionTitle
-            title="GitOps Vision"
-            subtitle="swkoo.kr을 위한 파이프라인 로드맵"
+            title="GitOps 운영 로드맵"
+            subtitle="swkoo.kr 운영 파이프라인 개선 방향"
           />
           {overview ? (
             <div className="space-y-4 text-sm text-slate-300">
@@ -239,27 +322,28 @@ export default async function Home() {
       {/* Featured Project - Observatory */}
       <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-950/40 p-8">
         <SectionTitle
-          title="Featured: Pipeline Observatory"
-          subtitle="어항처럼 투명하게 — 모든 파이프라인을 실시간으로 관찰"
+          title="핵심 기능: Pipeline Observatory"
+          subtitle="배포 흐름과 런타임 상태를 한 화면에서 판단"
         />
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <p className="text-slate-300">
-              OCI 인스턴스에서 실행 중인 모든 애플리케이션의 상태를 어항처럼
-              투명하게 모니터링할 수 있는 대시보드입니다.
+              OCI 인스턴스에서 실행 중인 애플리케이션을 파이프라인 상태와
+              런타임 지표로 연결해 운영 결정을 빠르게 내릴 수 있도록 만든다.
             </p>
             <ul className="space-y-2 text-sm text-slate-400">
               <li className="flex items-center gap-2">
                 <span className="text-emerald-400">✓</span>
-                Commit → Build → Push → Sync → Deploy 전체 파이프라인 추적
+                Commit → Build → Push → Sync → Deploy 흐름을 단일 타임라인으로
+                추적
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-emerald-400">✓</span>
-                GitHub Actions 워크플로 상태 실시간 연동
+                GitHub Actions 워크플로와 Argo CD 동기화 상태 연동
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-emerald-400">✓</span>
-                Argo CD Application 동기화 및 헬스 상태 모니터링
+                배포 실패/헬스 저하를 알람 흐름과 직접 연결
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-slate-500">○</span>
@@ -273,15 +357,15 @@ export default async function Home() {
               className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-700"
             >
               <span className="text-lg">🐟</span>
-              Observatory 보러가기 →
+              Observatory 보기 →
             </Link>
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span className="font-medium text-slate-300">Live Status</span>
+                <span className="font-medium text-slate-300">실시간 상태</span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-emerald-400">
-                  Online
+                  운영 중
                 </span>
               </div>
               {pipelinesEnvelope.pipelines.slice(0, 3).map((pipeline) => (
@@ -313,7 +397,7 @@ export default async function Home() {
                 </div>
               ))}
               {pipelinesEnvelope.pipelines.length === 0 && (
-                <p className="text-center text-slate-500">No pipelines yet</p>
+                <p className="text-center text-slate-500">파이프라인 없음</p>
               )}
             </div>
           </div>
@@ -323,7 +407,7 @@ export default async function Home() {
       {/* Contact Section */}
       <section className="text-center">
         <SectionTitle
-          title="Let's Connect"
+          title="연락하기"
           subtitle="협업이나 질문이 있으시면 언제든 연락주세요"
         />
         <div className="flex flex-wrap justify-center gap-4">
