@@ -45,6 +45,7 @@ swkoo.kr/
 | **github-actions-integration.md** | GitHub Actions ↔ Backend 연동 | ✅ 구현 완료 |
 | **alerting-implementation-plan.md** | Prometheus/Alertmanager 알람 설계 | ✅ Phase 1 완료 |
 | **registry.md** | OCI Registry 설정 및 인증 | ✅ 완료 |
+| **REFACTORING_PROMPT.md** | 프로젝트 리팩토링 작업 프롬프트 | 📋 작업 지시서 |
 
 ## 문서 업데이트 규칙
 
@@ -57,6 +58,7 @@ swkoo.kr/
 
 | 날짜 | 작업 | 관련 문서 |
 |------|------|----------|
+| 2025-12-22 | 프로젝트 리팩토링 프롬프트 작성 | `REFACTORING_PROMPT.md` |
 | 2025-12-22 | Mermaid 아키텍처 다이어그램 추가 | - |
 | 2025-12-22 | Alertmanager Discord 연동 | `alerting-implementation-plan.md` |
 | 2025-12-22 | GitHub Actions 워크플로 통합 | `github-actions-integration.md` |
