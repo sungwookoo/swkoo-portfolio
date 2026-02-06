@@ -188,6 +188,130 @@ export default async function ObservatoryPage() {
         </div>
       </section>
 
+      {/* Stats Bar */}
+      {pipelinesConfigured && pipelines.length > 0 && (
+        <section className="flex flex-wrap gap-4">
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <p className="text-2xl font-bold text-slate-100">{pipelines.length}</p>
+            <p className="text-xs text-slate-500">총 파이프라인</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <p className="text-2xl font-bold text-emerald-400">
+              {pipelines.filter((p) => p.healthStatus === 'Healthy').length}
+            </p>
+            <p className="text-xs text-slate-500">정상</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <p className="text-2xl font-bold text-emerald-400">
+              {pipelines.filter((p) => p.syncStatus === 'Synced').length}
+            </p>
+            <p className="text-xs text-slate-500">동기화 완료</p>
+          </div>
+          {pipelinesFetchedAt && (
+            <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
+              <p className="text-xs text-slate-500">
+                마지막 업데이트: {pipelinesFetchedAt}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,200px),1fr]">
+        {/* Sidebar - Legend */}
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+            <p className="font-semibold text-slate-200">상태 범례</p>
+            <div className="mt-3 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  파이프라인
+                </p>
+                <ul className="mt-2 space-y-2 text-slate-300">
+                  {[
+                    buildLegendItem('bg-emerald-400', '성공'),
+                    buildLegendItem('bg-rose-400', '실패'),
+                    buildLegendItem('bg-sky-400', '실행 중'),
+                    buildLegendItem('bg-slate-500', '대기'),
+                  ]}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  동기화
+                </p>
+                <ul className="mt-2 space-y-2 text-slate-300">
+                  {[
+                    buildLegendItem('bg-emerald-400/90', '동기화 완료'),
+                    buildLegendItem('bg-amber-400/90', '동기화 필요'),
+                  ]}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  헬스
+                </p>
+                <ul className="mt-2 space-y-2 text-slate-300">
+                  {[
+                    buildLegendItem('bg-emerald-400/90', '정상'),
+                    buildLegendItem('bg-amber-400/90', '저하'),
+                    buildLegendItem('bg-rose-400/90', '미확인'),
+                  ]}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Pipeline Cards */}
+        <section className="space-y-6">
+          {!pipelinesConfigured ? (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
+              <p className="text-lg text-slate-400">
+                Argo CD 자격 증명이 설정되지 않았습니다.
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                백엔드 환경 변수{' '}
+                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
+                  ARGOCD_BASE_URL
+                </code>{' '}
+                과{' '}
+                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
+                  ARGOCD_AUTH_TOKEN
+                </code>
+                을 지정해주세요.
+              </p>
+            </div>
+          ) : pipelines.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
+              <p className="text-lg text-slate-400">
+                파이프라인이 아직 없습니다
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Argo CD에 Application을 추가하면 여기에 표시됩니다.
+              </p>
+            </div>
+          ) : (
+            pipelines.map((pipeline) => (
+              <PipelineCard
+                key={pipeline.name}
+                pipeline={pipeline}
+                workflowsEnvelope={
+                  workflowsMap.get(pipeline.name) ?? {
+                    configured: false,
+                    repoUrl: null,
+                    workflows: [],
+                    runs: [],
+                    pagination: { page: 1, perPage: 10, total: 0 },
+                  }
+                }
+              />
+            ))
+          )}
+        </section>
+      </div>
+
       {/* Problem Definition */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
         <div className="mb-4">
@@ -388,129 +512,6 @@ export default async function ObservatoryPage() {
         </div>
       </section>
 
-      {/* Stats Bar */}
-      {pipelinesConfigured && pipelines.length > 0 && (
-        <section className="flex flex-wrap gap-4">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
-            <p className="text-2xl font-bold text-slate-100">{pipelines.length}</p>
-            <p className="text-xs text-slate-500">총 파이프라인</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
-            <p className="text-2xl font-bold text-emerald-400">
-              {pipelines.filter((p) => p.healthStatus === 'Healthy').length}
-            </p>
-            <p className="text-xs text-slate-500">정상</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
-            <p className="text-2xl font-bold text-emerald-400">
-              {pipelines.filter((p) => p.syncStatus === 'Synced').length}
-            </p>
-            <p className="text-xs text-slate-500">동기화 완료</p>
-          </div>
-          {pipelinesFetchedAt && (
-            <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3">
-              <p className="text-xs text-slate-500">
-                마지막 업데이트: {pipelinesFetchedAt}
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,200px),1fr]">
-        {/* Sidebar - Legend */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
-            <p className="font-semibold text-slate-200">상태 범례</p>
-            <div className="mt-3 space-y-4">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">
-                  파이프라인
-                </p>
-                <ul className="mt-2 space-y-2 text-slate-300">
-                  {[
-                    buildLegendItem('bg-emerald-400', '성공'),
-                    buildLegendItem('bg-rose-400', '실패'),
-                    buildLegendItem('bg-sky-400', '실행 중'),
-                    buildLegendItem('bg-slate-500', '대기'),
-                  ]}
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">
-                  동기화
-                </p>
-                <ul className="mt-2 space-y-2 text-slate-300">
-                  {[
-                    buildLegendItem('bg-emerald-400/90', '동기화 완료'),
-                    buildLegendItem('bg-amber-400/90', '동기화 필요'),
-                  ]}
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">
-                  헬스
-                </p>
-                <ul className="mt-2 space-y-2 text-slate-300">
-                  {[
-                    buildLegendItem('bg-emerald-400/90', '정상'),
-                    buildLegendItem('bg-amber-400/90', '저하'),
-                    buildLegendItem('bg-rose-400/90', '미확인'),
-                  ]}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Pipeline Cards */}
-        <section className="space-y-6">
-          {!pipelinesConfigured ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
-              <p className="text-lg text-slate-400">
-                Argo CD 자격 증명이 설정되지 않았습니다.
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                백엔드 환경 변수{' '}
-                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
-                  ARGOCD_BASE_URL
-                </code>{' '}
-                과{' '}
-                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
-                  ARGOCD_AUTH_TOKEN
-                </code>
-                을 지정해주세요.
-              </p>
-            </div>
-          ) : pipelines.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
-              <p className="text-lg text-slate-400">
-                파이프라인이 아직 없습니다
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Argo CD에 Application을 추가하면 여기에 표시됩니다.
-              </p>
-            </div>
-          ) : (
-            pipelines.map((pipeline) => (
-              <PipelineCard
-                key={pipeline.name}
-                pipeline={pipeline}
-                workflowsEnvelope={
-                  workflowsMap.get(pipeline.name) ?? {
-                    configured: false,
-                    repoUrl: null,
-                    workflows: [],
-                    runs: [],
-                    pagination: { page: 1, perPage: 10, total: 0 },
-                  }
-                }
-              />
-            ))
-          )}
-        </section>
-      </div>
     </main>
   );
 }

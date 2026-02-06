@@ -98,7 +98,7 @@ export default async function Home() {
               Observatory
             </h1>
             <p className="text-xl font-semibold text-slate-200">
-              프로덕션급 DevOps 운영 플랫폼
+              운영 중심 DevOps 플랫폼
             </p>
           </div>
           <p className="max-w-2xl text-lg leading-relaxed text-slate-300">
@@ -289,33 +289,21 @@ export default async function Home() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
           <SectionTitle
-            title="GitOps 운영 로드맵"
-            subtitle="swkoo.kr 운영 파이프라인 개선 방향"
+            title="운영 목표"
+            subtitle="지표와 배포 흐름을 하나의 판단 체계로 연결"
           />
-          {overview ? (
-            <div className="space-y-4 text-sm text-slate-300">
-              <p className="text-slate-400">
-                {overview.gitopsVision.description}
-              </p>
-              <ol className="space-y-3 text-slate-200">
-                {overview.gitopsVision.roadmap.map((item, index) => (
-                  <li
-                    key={item}
-                    className="flex gap-3 rounded-lg border border-slate-800 bg-slate-950 px-4 py-3"
-                  >
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
-                      {index + 1}
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">
-              GitOps 로드맵 데이터를 준비하는 중입니다.
-            </p>
-          )}
+          <ul className="space-y-3 text-sm text-slate-300">
+            {[
+              "배포 상태와 런타임 지표를 동일한 기준에서 확인",
+              "알람 발생 시 롤백/대응을 즉시 결정할 수 있는 흐름 유지",
+              "단일 운영자 환경에서도 반복 가능한 운영 절차 확보",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <span className="mt-2 size-1.5 rounded-full bg-emerald-400" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
