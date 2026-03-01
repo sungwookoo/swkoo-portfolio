@@ -3,6 +3,8 @@ import { registerAs } from '@nestjs/config';
 export interface PipelinesConfig {
   baseUrl?: string;
   authToken?: string;
+  username?: string;
+  password?: string;
   projects: string[];
   cacheTtl: number;
 }
@@ -32,6 +34,8 @@ export const pipelinesConfig = registerAs('pipelines', (): PipelinesConfig => {
   return {
     baseUrl: process.env.ARGOCD_BASE_URL,
     authToken: normalizeToken(process.env.ARGOCD_AUTH_TOKEN),
+    username: process.env.ARGOCD_USERNAME,
+    password: process.env.ARGOCD_PASSWORD,
     projects: parseProjects(process.env.ARGOCD_PROJECTS),
     cacheTtl: Number.isFinite(cacheTtl) && cacheTtl > 0 ? cacheTtl : 15
   };

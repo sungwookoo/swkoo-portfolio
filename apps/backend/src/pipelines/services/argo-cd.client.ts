@@ -19,15 +19,22 @@ import type {
 @Injectable()
 export class ArgoCdClient {
   private readonly logger = new Logger(ArgoCdClient.name);
+  private authToken?: string;
 
   constructor(
     private readonly httpService: HttpService,
     @Inject(pipelinesConfig.KEY)
     private readonly config: ConfigType<typeof pipelinesConfig>
-  ) {}
+  ) {
+    this.authToken = this.config.authToken;
+  }
 
   isConfigured(): boolean {
-    return Boolean(this.config.baseUrl && this.config.authToken);
+    return Boolean(
+      this.config.baseUrl &&
+        (this.authToken ||
+          (this.config.username && this.config.password))
+    );
   }
 
   async listApplications(): Promise<ArgoCdApplication[]> {
@@ -40,15 +47,9 @@ export class ArgoCdClient {
       this.config.projects.length > 0 ? { projects: this.config.projects.join(',') } : undefined;
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<ArgoCdApplication[] | ArgoCdApplicationListResponse>(url, {
-          headers: {
-            Authorization: this.config.authToken as string,
-            'Content-Type': 'application/json'
-          },
-          params
-        })
-      );
+      const response = await this.getWithAuth<
+        ArgoCdApplication[] | ArgoCdApplicationListResponse
+      >(url, params);
 
       const { data } = response;
 
@@ -75,14 +76,7 @@ export class ArgoCdClient {
     const url = this.buildUrl(`/api/v1/applications/${encodeURIComponent(name)}`);
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<ArgoCdApplication>(url, {
-          headers: {
-            Authorization: this.config.authToken as string,
-            'Content-Type': 'application/json'
-          }
-        })
-      );
+      const response = await this.getWithAuth<ArgoCdApplication>(url);
 
       return response.data;
     } catch (error: unknown) {
@@ -103,6 +97,77 @@ export class ArgoCdClient {
 
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     return new URL(normalizedPath, baseUrl).toString();
+  }
+
+  private async getWithAuth<T>(url: string, params?: Record<string, string>) {
+    try {
+      return await firstValueFrom(
+        this.httpService.get<T>(url, {
+          headers: this.buildHeaders(),
+          params
+        })
+      );
+    } catch (error: unknown) {
+      if (this.shouldRefreshSession(error)) {
+        await this.refreshSessionToken();
+        return await firstValueFrom(
+          this.httpService.get<T>(url, {
+            headers: this.buildHeaders(),
+            params
+          })
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  private buildHeaders(): Record<string, string> {
+    if (!this.authToken) {
+      return {
+        'Content-Type': 'application/json'
+      };
+    }
+
+    return {
+      Authorization: this.authToken,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  private shouldRefreshSession(error: unknown): boolean {
+    return Boolean(
+      isAxiosError(error) &&
+        error.response?.status === 401 &&
+        this.config.username &&
+        this.config.password
+    );
+  }
+
+  private async refreshSessionToken(): Promise<void> {
+    const username = this.config.username;
+    const password = this.config.password;
+
+    if (!username || !password) {
+      return;
+    }
+
+    const sessionUrl = this.buildUrl('/api/v1/session');
+    const response = await firstValueFrom(
+      this.httpService.post<{ token?: string }>(
+        sessionUrl,
+        { username, password },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+    const token = response.data?.token;
+
+    if (!token) {
+      throw new BadGatewayException('Failed to refresh Argo CD session token');
+    }
+
+    this.authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    this.logger.log('Refreshed Argo CD session token');
   }
 
   private handleError(error: unknown, context: string): never {

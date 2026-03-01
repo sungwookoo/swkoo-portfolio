@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'deploy/base/**'
   workflow_dispatch:
 
 env:
@@ -59,3 +61,22 @@ jobs:
             --tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest" \
             --push \
             apps/frontend
+
+      - name: Update deployment image tags
+        run: |
+          SHA_TAG="${GITHUB_SHA}"
+          sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}|g" deploy/base/backend/deployment.yaml
+          sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}|g" deploy/base/frontend/deployment.yaml
+
+      - name: Commit and push manifest updates
+        run: |
+          if git diff --quiet deploy/base/backend/deployment.yaml deploy/base/frontend/deployment.yaml; then
+            echo "No manifest changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/base/backend/deployment.yaml deploy/base/frontend/deployment.yaml
+          git commit -m "chore: update image tags to ${GITHUB_SHA}"
+          git push
