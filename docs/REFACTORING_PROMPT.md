@@ -1,26 +1,34 @@
 # Observatory 프로젝트 리팩토링 작업 프롬프트
 
-> 다른 AI 에이전트에게 작업을 위임하기 위한 상세 프롬프트
-> 
-> **작업 목표**: Observatory를 "포트폴리오 프로젝트"에서 "실제 회사에 바로 도입 가능한 DevOps 운영 플랫폼"으로 전면 리팩토링
+> ⚠️ **Superseded by [`../VISION.md`](../VISION.md)** (2026-04-23)
+>
+> 이 문서의 방향성·검증 기준은 `VISION.md`로 이관되었습니다. 이 문서는 **과거에 수행한 리팩토링의 기록**이자, 현재 페이지 카피의 근거로만 유지됩니다.
+>
+> - 새 리팩토링/기능 의사결정은 `VISION.md`를 우선 참조하세요.
+> - 이 문서와 VISION이 충돌하면 **VISION이 기준**입니다.
+> - 아래 "최종 검증 기준"(회사에 쓸 수 있는가 / 혼자 설계 가능한가 / 중급 이상인가)은 **더 이상 사용하지 않습니다.** 대신 `VISION §4 성공 기준`(B 70% 매일 운영 탭 / A 30% 3분 설계 설명)을 사용하세요.
+> - 대부분의 섹션별 지시(Hero, Problem Definition, Design Principles, Trade-offs 등)는 **이미 `app/page.tsx`와 `app/observatory/page.tsx`에 반영되어 있습니다.**
 
 ---
 
-## 🎯 작업 목표
+## 🎯 작업 목표 (과거 기준 — 참고용)
 
 **핵심 목표**: Observatory는 '보여주기용 프로젝트'가 아니라 '운영 가능한 DevOps 플랫폼'으로 리팩토링한다.
 
-**최종 검증 기준** (3개 모두 YES여야 함):
-1. ✅ 이걸 실제 회사에 가져다 쓸 수 있는가?
-2. ✅ 이 시스템을 혼자 설계·운영했을 것 같은가?
-3. ✅ DevOps 중급 이상으로 판단 가능한가?
+**~~최종 검증 기준 (3개 모두 YES여야 함)~~** — **폐기됨. `VISION §4`의 B/A 성공 기준을 사용할 것.**
+
+~~1. 이걸 실제 회사에 가져다 쓸 수 있는가?~~
+~~2. 이 시스템을 혼자 설계·운영했을 것 같은가?~~
+~~3. DevOps 중급 이상으로 판단 가능한가?~~
+
+> 폐기 사유: "회사에 쓸 수 있는가"는 Observatory를 오픈소스 제품으로 밀게 만드는 기준이었으나, VISION §3에서 오픈소스 제품화는 non-goal로 확정되었습니다. 대신 "내가 매일 여는 탭인가(B)" + "외부인이 3분 내 설계 의도 요약 가능한가(A)"로 대체합니다.
 
 ---
 
 ## 📋 현재 프로젝트 상태
 
 ### 프로젝트 구조
-- **위치**: `/Users/guseong-u/dev/swkoo.kr/swkoo-portfolio/`
+- **위치**: `C:\sungwoo\swkoo-portfolio\` (Windows)
 - **Frontend**: Next.js (App Router) + TypeScript + Tailwind CSS
 - **Backend**: NestJS + TypeScript
 - **주요 페이지**:
@@ -33,6 +41,8 @@
 - ✅ Mermaid 아키텍처 다이어그램 (3가지 뷰)
 - ✅ Alertmanager → Discord 알람 연동
 - ✅ Pipeline Observatory 대시보드
+- ✅ Problem Definition / Design Principles / Trade-offs 섹션 (Observatory)
+- ✅ Environment Definition 섹션 (메인 페이지)
 
 ### 참고 문서
 - `swkoo-portfolio/README.md`: 프로젝트 로드맵
@@ -211,33 +221,32 @@ Production-ready DevOps Operations Platform
 
 ---
 
-## 🔍 작업 검증 체크리스트
+## 🔍 작업 검증 체크리스트 (이력)
 
-작업 완료 후 다음을 확인:
+초기 리팩토링 시점 기준. 대부분 **완료**되어 현재 페이지 구조에 반영되어 있습니다.
 
 ### 메인 페이지 (`/`)
-- [ ] Hero Section에 "OCI IaaS 기반", "Self-managed Kubernetes", "Managed K8s 미사용" 명시
-- [ ] "포트폴리오" 단어 제거
-- [ ] Environment Definition 섹션 추가 (표 형식)
-- [ ] 기술 나열 위주 → 운영 책임 범위 중심으로 변경
+- [x] Hero Section에 "OCI IaaS 기반", "Self-managed Kubernetes", "Managed K8s 미사용" 명시
+- [x] "포트폴리오" 단어 제거
+- [x] Environment Definition 섹션 추가 (표 형식)
+- [x] 기술 나열 위주 → 운영 책임 범위 중심으로 변경
 
 ### Observatory 페이지 (`/observatory`)
-- [ ] Problem Definition 섹션 추가 (실무 문제)
-- [ ] Design Principles 섹션 추가 (최소 4개)
-- [ ] Architecture Section에 데이터 흐름 설명 추가
-- [ ] CI/CD 섹션 추가 (운영 시나리오 중심)
-- [ ] Observability 섹션 추가 (결과 중심, 예시 포함)
-- [ ] Trade-offs 섹션 추가 (선택하지 않은 옵션 + 이유)
+- [x] Problem Definition 섹션 추가 (실무 문제)
+- [x] Design Principles 섹션 추가 (최소 4개)
+- [x] Architecture Section에 데이터 흐름 설명 추가
+- [x] CI/CD 섹션 추가 (운영 시나리오 중심)
+- [x] Observability 섹션 추가 (결과 중심, 예시 포함)
+- [x] Trade-offs 섹션 추가 (선택하지 않은 옵션 + 이유)
 
 ### 문구/톤
-- [ ] "포트폴리오" 관련 표현 제거
-- [ ] 학습/감상 톤 제거
-- [ ] 운영자 시점, 판단 중심 톤 사용
+- [x] "포트폴리오" 관련 표현 제거
+- [x] 학습/감상 톤 제거
+- [x] 운영자 시점, 판단 중심 톤 사용
 
-### 최종 검증
-- [ ] 실제 회사에 가져다 쓸 수 있는가? → YES
-- [ ] 혼자 설계·운영했을 것 같은가? → YES
-- [ ] DevOps 중급 이상으로 판단 가능한가? → YES
+### ~~최종 검증~~ (폐기 — `VISION §4`로 대체)
+- ~~실제 회사에 가져다 쓸 수 있는가?~~ → VISION §3에서 오픈소스 제품화는 non-goal
+- 대체 기준: **B(매일 여는 운영 탭) 70% + A(3분 설계 설명) 30%**
 
 ---
 
@@ -259,7 +268,7 @@ Production-ready DevOps Operations Platform
 
 1. **현재 코드베이스 파악**
    ```bash
-   cd /Users/guseong-u/dev/swkoo.kr/swkoo-portfolio
+   cd C:\sungwoo\swkoo-portfolio
    # 메인 페이지와 Observatory 페이지 구조 확인
    ```
 

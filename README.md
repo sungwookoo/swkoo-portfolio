@@ -1,69 +1,90 @@
 # swkoo.kr 애플리케이션 개요
 
-이 문서는 `https://swkoo.kr` 루트 도메인에 배포할 GitOps 포트폴리오 애플리케이션의 전체 계획을 정리합니다. 이 디렉터리(`swkoo-portfolio/`)는 애플리케이션 전용 저장소 루트로 사용하도록 구성되어 있으며, 백엔드는 NestJS, 프론트엔드는 Next.js(App Router) + TypeScript + Tailwind CSS 조합을 기본 스택으로 사용합니다.
+> **방향 기준선:** [VISION.md](./VISION.md) ← 이 저장소의 모든 결정은 여기에서 파생됩니다.
+> README는 VISION의 구체적 로드맵 표현입니다. 충돌하면 VISION이 우선합니다.
 
-## 장기 목표
+이 디렉터리(`swkoo-portfolio/`)는 `https://swkoo.kr`에 배포되는 **Observatory** 애플리케이션의 저장소 루트입니다. 백엔드는 NestJS, 프론트엔드는 Next.js(App Router) + TypeScript + Tailwind CSS를 사용합니다.
 
-- **포트폴리오/소개 페이지**: 개인 인프라 철학, K3s + GitOps 구성요소(Argo CD, Portainer, Grafana, Registry)를 개괄.
-- **GitOps 시각화 대시보드**: Argo CD Application 및 배포 이벤트를 수집하여 파이프라인 상태를 실시간에 가깝게 보여줌.
-- **확장 가능한 데이터 수집**: 추후 다른 프로젝트(다른 GitOps 파이프라인)까지 포함될 수 있도록 아키텍처를 모듈화.
+## Observatory는 무엇인가
 
-## 단계별 로드맵
+**"Commit → CI Build → Registry Push → Argo Sync → Pod Ready" 한 번의 배포 생명주기를 단일 운영자 시점의 한 타임라인으로 엮고, 그 위에 활성 알람을 겹쳐 운영 판단을 가속하는** 관측 도구.
 
-### Phase 1 – 기본 토대 구축
+- **관측(observation)과 판단(decision)만** 담당. 조작(action)은 원천 도구(Argo CD/GitHub/Grafana)로 위임.
+- 고유 가치: Argo CD UI / Grafana / GitHub Actions 사이의 **경계를 잇는 cross-tool 타임라인**.
+- 자세한 정체성·non-goal·성공 기준은 [VISION.md](./VISION.md) 참조.
 
-1. **Monorepo 구조 정리**
+## 기능 심사 3질문 (모든 로드맵 항목에 적용)
+
+새 항목을 추가하거나 체크리스트를 조정할 때는 먼저 VISION §5의 심사를 통과해야 합니다:
+
+1. 이 기능은 Argo CD / Grafana / GitHub 중 하나가 이미 잘 하는가? → **링크**로 위임, 재구현 금지.
+2. 이 기능은 위 세 도구 사이의 **경계를 잇는가?** → 이 앱의 핵심.
+3. 이 기능은 조작인가 관측인가? → **조작이면 거절**한다.
+
+---
+
+## 로드맵
+
+### Phase 1 – 기본 토대 ✅ 완료
+
+1. **Monorepo 구조**
    - `apps/backend` : NestJS API
    - `apps/frontend`: Next.js(SSR) 프론트엔드
-   - `packages/shared`: 공용 타입/유틸 집합(추후 도입)
-2. **CI/CD 관점의 요구 정의**
-   - Argo CD에서 조회할 Application 목록과 클러스터 네임스페이스 범위 결정.
-   - 이벤트 수집 방식(폴링 vs Webhook Relay) 1차 선택.
-3. **최소 Landing Page**
-   - 인프라 개요, 도메인, GitOps 설명 섹션 탑재.
-4. **기본 API**
-   - `GET /health` 헬스체크
-   - `GET /overview` : 인프라 설명 반환(정적 데이터로 시작)
+2. **최소 Landing + Observatory 페이지**
+3. **기본 API**: `GET /health`, `GET /overview`
 
-### Phase 2 – GitOps 이벤트 수집 MVP ✅ 완료
+### Phase 2 – 읽기 전용 통합 ✅ 대부분 완료
 
-1. **Argo CD 연동**
-   - ✅ NestJS PipelinesModule + Argo CD API 클라이언트 (`GET /api/pipelines`, `GET /api/pipelines/:name`)
-   - ✅ 서비스어카운트/토큰 배포 및 Kubernetes Secret 관리.
-2. **GitHub Actions 연동**
-   - ✅ GitHub API 클라이언트 구현 (`GET /api/pipelines/:name/workflows`)
-   - ✅ 워크플로 실행 목록 조회 및 상태 표시.
-3. **백엔드 저장소**
-   - ✅ 인메모리 캐시 + TTL 기본 구현 (환경변수 `PIPELINES_CACHE_TTL`).
-   - ☐ Redis/Mongo 등 외부 스토리지 도입 검토.
-4. **프론트엔드 시각화**
-   - ✅ Pipeline Observatory 섹션에서 상태 배지/타임라인 카드 표시.
-   - ✅ GitHub Actions 워크플로 실행 목록 표시.
-   - ✅ Mermaid 아키텍처 다이어그램 (3가지 뷰).
-   - ☐ 실시간 갱신(폴링 → WebSocket/SSE) 도입.
-5. **알람 시스템** (Phase 2.5)
-   - ✅ Alertmanager → Discord Webhook 연동.
-   - ✅ swkoo namespace 커스텀 알람 규칙 (5개).
-   - ☐ Observatory에 활성 알람 표시 섹션 추가.
+| 항목 | 상태 | 심사 결과 |
+|---|---|---|
+| Argo CD API 연동 (`GET /api/pipelines`, `GET /api/pipelines/:name`) | ✅ | ② 경계 잇기 — 핵심 |
+| GitHub API 연동 (`GET /api/pipelines/:name/workflows`) | ✅ | ② 경계 잇기 — 핵심 |
+| 인메모리 캐시 + TTL (`PIPELINES_CACHE_TTL`) | ✅ | 내부 구현 |
+| Pipeline Observatory UI (상태 배지/타임라인 카드) | ✅ | ③ 관측 — OK |
+| GitHub Actions run 요약 표시 | ✅ | ③ 관측 — OK |
+| Mermaid 아키텍처 다이어그램 | ✅ | A(설계 설명) — OK |
+| Alertmanager → Discord 연동 | ✅ | 인프라 측 |
+| swkoo namespace 커스텀 알람 규칙 (5개) | ✅ | 인프라 측 |
 
-### Phase 3 – 실시간/확장 🚧 진행 예정
+### Phase 2.5 – 고유 가치 확립 🎯 **현재 우선순위**
 
-1. **실시간 이벤트**
-   - ☐ Argo CD Webhook → NestJS → WebSocket/SSE 전송.
-   - ☐ GitHub Actions Webhook 연동.
-2. **Observability 연동**
-   - ☐ Alertmanager API → Observatory 활성 알람 표시.
-   - ☐ Grafana 대시보드 임베드 또는 스크린샷 연동.
-3. **히스토리/통계**
-   - ☐ Mongo/Postgres 등 영속 저장소 도입 후 배포 히스토리 시각화.
+VISION §2의 핵심(cross-tool 타임라인 + 알람 overlay)에 가장 직접 닿는 항목들.
 
-## 기술 스택 요약
+| 항목 | 상태 | 심사 결과 |
+|---|---|---|
+| 활성 알람 overlay를 Observatory에 표시 (Alertmanager API) | ☐ | ② 경계 잇기 — **핵심** |
+| 배포 1건 단위로 `commit → run → image → sync → pod` 연결 뷰 | ☐ | ② 경계 잇기 — **핵심** |
 
-- **Backend**: NestJS, TypeScript, Axios(Argo CD API), class-validator 등 공통 Nest 라이브러리.
-- **Frontend**: Next.js(App Router) + TypeScript + Tailwind CSS + Zustand(또는 Redux Toolkit) 상태 관리.
-- **통신**: REST API로 시작 → 필요 시 WebSocket/SSE 확장.
-- **테스트**: Jest(Nest 기본), Playwright/React Testing Library(프론트).
-- **CI/CD**: GitOps 파이프라인에서 빌드 → Docker 이미지 → OCI Registry → Argo CD 배포.
+### Phase 3 – 이벤트 스토어 & 히스토리 🚧
+
+"실시간"은 과잉 주장이므로 **near-real-time**으로 정직하게 표기. 진짜 WebSocket 스트리밍은 non-goal.
+
+| 항목 | 상태 | 심사 결과 |
+|---|---|---|
+| Argo CD Webhook → 경량 이벤트 스토어(SQLite 수준) | ☐ | 관측 인프라 — OK |
+| GitHub Actions Webhook 수신 | ☐ | 관측 인프라 — OK |
+| 배포 이벤트 히스토리(최근 N회, MTTR 추이) | ☐ | ② 경계 잇기 — **핵심** |
+| Grafana 패널 **임베드/링크** | ☐ | ① 재구현 금지, 링크만 |
+
+### Non-goals (의도적으로 안 만듦)
+
+VISION §3 전체가 여기로 매핑됨. 요약:
+
+- ❌ **Argo CD UI 조작 기능 재구현** (Sync/Refresh 버튼, 리소스 편집 등)
+- ❌ **Grafana 차트 재구현** (CPU/Mem/지연 시계열)
+- ❌ **진짜 실시간(WebSocket/SSE) 스트리밍 주장** — Webhook + 폴링까지만
+- ❌ **오픈소스 제품화 / 설정 외부화** (현 단계에서 Application/Repo 목록은 하드코딩 유지)
+
+이 목록은 기능 제안이 왔을 때 **가장 먼저** 확인합니다.
+
+---
+
+## 기술 스택
+
+- **Backend**: NestJS, TypeScript, Axios, class-validator
+- **Frontend**: Next.js(App Router) + TypeScript + Tailwind CSS + SWR + Zustand + Mermaid
+- **통신**: REST. Webhook 수신은 Phase 3에 도입 예정.
+- **테스트**: Jest (Nest)
 
 ## 컨테이너 빌드
 
@@ -76,17 +97,13 @@
 ## CI/CD 파이프라인
 
 - GitHub Actions: `.github/workflows/docker-publish.yml`
-  - 기본 브랜치 푸시 시 백엔드/프론트엔드 이미지를 빌드 후 OCIR로 푸시
-  - 필요한 시크릿과 절차는 `docs/registry.md` 참고
+  - 기본 브랜치 푸시 시 백/프론트 이미지를 빌드 후 OCIR로 푸시
+  - 시크릿/절차는 [`docs/registry.md`](./docs/registry.md) 참고
 
-## 인프라 통합 고려사항
+## 문서 구조
 
-- Terraform으로 `swkoo.kr` 애플리케이션 네임스페이스/Ingress/증서를 관리할 모듈 추가.
-- OCI Registry와 GitHub Actions/Argo CD 간 인증 전략 정리(서비스 어카운트, ImagePullSecret).
-- k3s 클러스터 내 ConfigMap/Secret로 Argo CD API 자격 증명 제공.
-
-## 추후 문서화 계획
-
-- `docs/architecture.md`: 전체 시스템 구성도와 데이터 파이프라인 설명.
-- `apps/backend/README.md`: 로컬 개발 방법, 환경변수, 테스트 전략.
-- `apps/frontend/README.md`: 디자인 시스템, 페이지 구조, 배포 전략.
+- [`VISION.md`](./VISION.md) — **기준선**. 정체성·고유가치·non-goal·성공 기준.
+- `README.md` (이 파일) — 로드맵의 구체 표현.
+- [`docs/INDEX.md`](./docs/INDEX.md) — 기술 문서 인덱스.
+- [`docs/REFACTORING_PROMPT.md`](./docs/REFACTORING_PROMPT.md) — 과거 리팩토링 지시서 (VISION에 종속).
+- [`deploy/README.md`](./deploy/README.md) — Kustomize 배포 구조.
