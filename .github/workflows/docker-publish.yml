@@ -34,7 +34,12 @@ jobs:
 
   backend:
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    # Run on backend code changes, or whenever the workflow is manually dispatched
+    # (paths-filter reports "no changes" on workflow_dispatch, which would otherwise
+    # block intentional manual re-runs).
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'workflow_dispatch'
     # A. Native ARM runner — no QEMU emulation (cluster target is VM.Standard.A1.Flex, aarch64)
     runs-on: ubuntu-22.04-arm
     permissions:
@@ -71,7 +76,9 @@ jobs:
 
   frontend:
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: |
+      needs.changes.outputs.frontend == 'true' ||
+      github.event_name == 'workflow_dispatch'
     # C. Parallel with backend — independent jobs on native ARM runners
     runs-on: ubuntu-22.04-arm
     permissions:
@@ -116,14 +123,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # If the build job ran and succeeded, always update the tag — regardless of
+      # whether the trigger was a path-matching push or a manual workflow_dispatch.
       - name: Update backend image tag
-        if: needs.changes.outputs.backend == 'true' && needs.backend.result == 'success'
+        if: needs.backend.result == 'success'
         run: |
           SHA_TAG="${GITHUB_SHA}"
           sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}|g" deploy/base/backend/deployment.yaml
 
       - name: Update frontend image tag
-        if: needs.changes.outputs.frontend == 'true' && needs.frontend.result == 'success'
+        if: needs.frontend.result == 'success'
         run: |
           SHA_TAG="${GITHUB_SHA}"
           sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}|g" deploy/base/frontend/deployment.yaml
