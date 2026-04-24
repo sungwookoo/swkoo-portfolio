@@ -12,6 +12,24 @@ export const statsLabels = {
   lastUpdatedPrefix: '마지막 업데이트:',
 } as const;
 
+export const alerts = {
+  title: '활성 알람',
+  subtitle: 'Alertmanager로부터 현재 발화 중인 알람 목록',
+  empty: '현재 활성 알람 없음',
+  unconfigured: 'Alertmanager 자격 증명이 설정되지 않았습니다.',
+  unconfiguredHint:
+    '백엔드 환경 변수 ALERTMANAGER_BASE_URL 을 지정하면 활성 알람이 여기 표시됩니다.',
+  severityLabel: {
+    critical: 'Critical',
+    warning: 'Warning',
+    info: 'Info',
+    unknown: 'Unknown',
+  },
+  pipelineCardBadge: '알람',
+  sourceLinkLabel: 'Alertmanager',
+  namespaceLabel: 'namespace',
+} as const;
+
 export const legend = {
   title: '상태 범례',
   sections: [

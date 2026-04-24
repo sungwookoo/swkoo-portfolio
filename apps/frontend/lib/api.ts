@@ -1,4 +1,9 @@
-import type { PipelinesEnvelope, PortfolioOverview, WorkflowsEnvelope } from './types';
+import type {
+  AlertsEnvelope,
+  PipelinesEnvelope,
+  PortfolioOverview,
+  WorkflowsEnvelope
+} from './types';
 
 const defaultBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -66,6 +71,46 @@ export async function fetchPipelines(): Promise<PipelinesEnvelope> {
       configured: false,
       fetchedAt: null,
       pipelines: []
+    };
+  }
+}
+
+export async function fetchAlerts(): Promise<AlertsEnvelope> {
+  if (!API_BASE_URL) {
+    return {
+      configured: false,
+      fetchedAt: null,
+      alerts: []
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/alerts`, {
+      next: { revalidate: 15 }
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to load alerts', response.statusText);
+      return {
+        configured: false,
+        fetchedAt: null,
+        alerts: []
+      };
+    }
+
+    const payload = (await response.json()) as AlertsEnvelope;
+
+    return {
+      configured: Boolean(payload.configured),
+      fetchedAt: payload.fetchedAt ?? null,
+      alerts: Array.isArray(payload.alerts) ? payload.alerts : []
+    };
+  } catch (error) {
+    console.warn('Alerts request failed', error);
+    return {
+      configured: false,
+      fetchedAt: null,
+      alerts: []
     };
   }
 }

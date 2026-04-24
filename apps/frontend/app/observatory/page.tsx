@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import clsx from 'clsx';
 
-import { fetchPipelines, fetchWorkflows } from '@/lib/api';
+import { fetchAlerts, fetchPipelines, fetchWorkflows } from '@/lib/api';
+import { AlertList } from '@/components/AlertList';
 import { PipelineCard } from '@/components/PipelineCard';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
 import {
@@ -49,7 +50,10 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 export default async function ObservatoryPage() {
-  const pipelinesEnvelope = await fetchPipelines();
+  const [pipelinesEnvelope, alertsEnvelope] = await Promise.all([
+    fetchPipelines(),
+    fetchAlerts(),
+  ]);
   const pipelinesConfigured = pipelinesEnvelope.configured;
   const pipelines = pipelinesEnvelope.pipelines;
   const pipelinesFetchedAt = formatTimestamp(pipelinesEnvelope.fetchedAt);
@@ -66,6 +70,16 @@ export default async function ObservatoryPage() {
     pipelines.forEach((p, i) => {
       workflowsMap.set(p.name, workflowsResults[i]);
     });
+  }
+
+  // Group alerts by associated pipeline for card-level overlay
+  const alertsByPipeline = new Map<string, typeof alertsEnvelope.alerts>();
+  for (const alert of alertsEnvelope.alerts) {
+    if (alert.associatedPipeline) {
+      const bucket = alertsByPipeline.get(alert.associatedPipeline) ?? [];
+      bucket.push(alert);
+      alertsByPipeline.set(alert.associatedPipeline, bucket);
+    }
   }
 
   return (
@@ -109,6 +123,12 @@ export default async function ObservatoryPage() {
           )}
         </section>
       )}
+
+      {/* Active Alerts Overlay */}
+      <AlertList
+        configured={alertsEnvelope.configured}
+        alerts={alertsEnvelope.alerts}
+      />
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,200px),1fr]">
@@ -179,6 +199,7 @@ export default async function ObservatoryPage() {
                     pagination: { page: 1, perPage: 10, total: 0 },
                   }
                 }
+                relatedAlerts={alertsByPipeline.get(pipeline.name) ?? []}
               />
             ))
           )}

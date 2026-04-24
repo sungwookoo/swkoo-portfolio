@@ -1,11 +1,34 @@
 import clsx from "clsx";
-import type { PipelineSummary, WorkflowsEnvelope } from "@/lib/types";
+import type { Alert, AlertSeverity, PipelineSummary, WorkflowsEnvelope } from "@/lib/types";
+import { alerts as alertsContent } from "@/content/observatory";
 import { PipelineTimeline } from "./PipelineTimeline";
 import { WorkflowRunList } from "./WorkflowRunList";
 
 interface PipelineCardProps {
   pipeline: PipelineSummary;
   workflowsEnvelope: WorkflowsEnvelope;
+  relatedAlerts?: Alert[];
+}
+
+function alertBadgeClass(topSeverity: AlertSeverity): string {
+  switch (topSeverity) {
+    case "critical":
+      return "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/30";
+    case "warning":
+      return "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30";
+    case "info":
+      return "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/30";
+    default:
+      return "bg-slate-600/20 text-slate-300 ring-1 ring-slate-600/30";
+  }
+}
+
+function highestSeverity(alerts: Alert[]): AlertSeverity {
+  const order: AlertSeverity[] = ["critical", "warning", "info", "unknown"];
+  for (const sev of order) {
+    if (alerts.some((a) => a.severity === sev)) return sev;
+  }
+  return "unknown";
 }
 
 function resolveBadgeClass(status: string, type: "sync" | "health"): string {
@@ -41,8 +64,11 @@ function formatTimestamp(timestamp: string | null | undefined) {
 export function PipelineCard({
   pipeline,
   workflowsEnvelope,
+  relatedAlerts = [],
 }: PipelineCardProps) {
   const latestRun = workflowsEnvelope.runs[0] ?? null;
+  const alertCount = relatedAlerts.length;
+  const topSeverity = alertCount > 0 ? highestSeverity(relatedAlerts) : "unknown";
 
   return (
     <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow-inner shadow-slate-900/40">
@@ -74,6 +100,17 @@ export function PipelineCard({
           >
             {pipeline.healthStatus}
           </span>
+          {alertCount > 0 && (
+            <span
+              className={clsx(
+                "rounded-full px-3 py-1 font-medium uppercase tracking-wide",
+                alertBadgeClass(topSeverity)
+              )}
+              title={relatedAlerts.map((a) => a.alertname).join(", ")}
+            >
+              ⚠ {alertCount} {alertsContent.pipelineCardBadge}
+            </span>
+          )}
         </div>
       </header>
 

@@ -27,6 +27,15 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            # Alertmanager in-cluster URL. Defaults below assume kube-prometheus-stack;
+            # confirm actual service name with: kubectl get svc -n monitoring
+            # Common candidates:
+            #   - alertmanager-operated.monitoring.svc.cluster.local:9093
+            #   - alertmanager-main.monitoring.svc.cluster.local:9093
+            # If Alertmanager requires auth, set ALERTMANAGER_AUTH_TOKEN via the
+            # swkoo-backend-env Secret.
+            - name: ALERTMANAGER_BASE_URL
+              value: "http://alertmanager-operated.monitoring.svc.cluster.local:9093"
           envFrom:
             - secretRef:
                 name: swkoo-backend-env
