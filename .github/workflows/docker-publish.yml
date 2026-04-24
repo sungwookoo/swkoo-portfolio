@@ -15,19 +15,34 @@ env:
   FRONTEND_REPO: ${{ secrets.OCI_FRONTEND_REPO }}
 
 jobs:
-  build:
+  # D. Path filter: only rebuild the service whose code actually changed
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+            frontend:
+              - 'apps/frontend/**'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    # A. Native ARM runner — no QEMU emulation (cluster target is VM.Standard.A1.Flex, aarch64)
+    runs-on: ubuntu-22.04-arm
     permissions:
       contents: read
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Log in to OCI registry
         env:
@@ -40,32 +55,76 @@ jobs:
           fi
           echo "$OCI_AUTH_TOKEN" | docker login "${REGISTRY_HOST}" --username "$OCI_USERNAME" --password-stdin
 
-      - name: Build and push backend image
-        run: |
-          SHA_TAG="${GITHUB_SHA}"
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file apps/backend/Dockerfile \
-            --tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}" \
-            --tag "${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:latest" \
-            --push \
-            apps/backend
+      # B. build-push-action with GHA cache, scope=backend so caches don't evict each other
+      - uses: docker/build-push-action@v5
+        with:
+          context: apps/backend
+          file: apps/backend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY_HOST }}/${{ env.NAMESPACE }}/${{ env.BACKEND_REPO }}:${{ github.sha }}
+            ${{ env.REGISTRY_HOST }}/${{ env.NAMESPACE }}/${{ env.BACKEND_REPO }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
-      - name: Build and push frontend image
-        run: |
-          SHA_TAG="${GITHUB_SHA}"
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file apps/frontend/Dockerfile \
-            --tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}" \
-            --tag "${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:latest" \
-            --push \
-            apps/frontend
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    # C. Parallel with backend — independent jobs on native ARM runners
+    runs-on: ubuntu-22.04-arm
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Update deployment image tags
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to OCI registry
+        env:
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+          OCI_AUTH_TOKEN: ${{ secrets.OCI_AUTH_TOKEN }}
+        run: |
+          if [ -z "$REGISTRY_HOST" ]; then
+            echo "REGISTRY_HOST secret is required" >&2
+            exit 1
+          fi
+          echo "$OCI_AUTH_TOKEN" | docker login "${REGISTRY_HOST}" --username "$OCI_USERNAME" --password-stdin
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: apps/frontend
+          file: apps/frontend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY_HOST }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_REPO }}:${{ github.sha }}
+            ${{ env.REGISTRY_HOST }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_REPO }}:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  update-manifests:
+    needs: [changes, backend, frontend]
+    # Run if at least one build succeeded. Skipped/failed builds do not commit a stale tag.
+    if: |
+      always() &&
+      (needs.backend.result == 'success' || needs.frontend.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update backend image tag
+        if: needs.changes.outputs.backend == 'true' && needs.backend.result == 'success'
         run: |
           SHA_TAG="${GITHUB_SHA}"
           sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${BACKEND_REPO}:${SHA_TAG}|g" deploy/base/backend/deployment.yaml
+
+      - name: Update frontend image tag
+        if: needs.changes.outputs.frontend == 'true' && needs.frontend.result == 'success'
+        run: |
+          SHA_TAG="${GITHUB_SHA}"
           sed -i "s|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:.*|image: ${REGISTRY_HOST}/${NAMESPACE}/${FRONTEND_REPO}:${SHA_TAG}|g" deploy/base/frontend/deployment.yaml
 
       - name: Commit and push manifest updates
