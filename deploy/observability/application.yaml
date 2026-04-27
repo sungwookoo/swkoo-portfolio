@@ -1,0 +1,26 @@
+# Argo CD Application that syncs deploy/observability/ into the monitoring
+# namespace. Apply once on the cluster; afterwards Argo CD reconciles changes
+# pushed to this directory automatically.
+#
+# Apply (one-time bootstrap):
+#   kubectl apply -f deploy/observability/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: swkoo-observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+    targetRevision: main
+    path: deploy/observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

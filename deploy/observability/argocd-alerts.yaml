@@ -1,0 +1,59 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: argocd-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: argocd.apps
+      rules:
+        - alert: ArgoCdAppOutOfSync
+          expr: argocd_app_info{sync_status="OutOfSync"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} is OutOfSync
+            description: Application {{ $labels.name }} (project {{ $labels.project }}, dest namespace {{ $labels.dest_namespace }}) has been OutOfSync for more than 5 minutes
+            runbook: 'Inspect: argocd app diff {{ $labels.name }}'
+
+        - alert: ArgoCdAppHealthDegraded
+          expr: argocd_app_info{health_status="Degraded"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} health is Degraded
+            description: Application {{ $labels.name }} health has been Degraded for more than 10 minutes — Sync may be Synced but resources are unhealthy
+            runbook: 'Inspect: argocd app get {{ $labels.name }}'
+
+        - alert: ArgoCdAppHealthMissing
+          expr: argocd_app_info{health_status="Missing"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} has Missing resources
+            description: Application {{ $labels.name }} reports Missing resources — manifest references something that doesn't exist in the cluster
+
+        - alert: ArgoCdAppSyncFailed
+          expr: increase(argocd_app_sync_total{phase="Failed"}[10m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} sync failed
+            description: Application {{ $labels.name }} sync attempt failed within the last 10 minutes (project {{ $labels.project }})
+            runbook: 'Inspect: argocd app sync {{ $labels.name }}'
+
+        - alert: ArgoCdControllerDown
+          expr: up{job=~"argocd-metrics|argocd-server-metrics|argocd-repo-server"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Argo CD component {{ $labels.job }} is down
+            description: Argo CD {{ $labels.job }} has not responded to scrape for 5 minutes — GitOps reconciliation may be stalled
