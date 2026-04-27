@@ -70,6 +70,16 @@ export function AlertList({ configured, alerts }: AlertListProps) {
           </h2>
           <p className="text-sm text-slate-400">{alertsContent.subtitle}</p>
         </div>
+        {configured && (
+          <a
+            href={alertsContent.consoleLink.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-slate-400 hover:text-slate-200"
+          >
+            {alertsContent.consoleLink.label} ↗
+          </a>
+        )}
       </div>
 
       {!configured ? (
@@ -109,16 +119,6 @@ export function AlertList({ configured, alerts }: AlertListProps) {
                     </span>
                   ) : null}
                   {relative && <span className="text-xs text-slate-500">· {relative}</span>}
-                  {alert.generatorURL && (
-                    <a
-                      href={alert.generatorURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto text-xs text-slate-400 hover:text-slate-200"
-                    >
-                      {alertsContent.sourceLinkLabel} ↗
-                    </a>
-                  )}
                 </div>
                 {alert.summary && (
                   <p className="mt-2 text-sm text-slate-300">{alert.summary}</p>

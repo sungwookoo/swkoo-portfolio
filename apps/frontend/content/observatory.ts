@@ -26,7 +26,10 @@ export const alerts = {
     unknown: 'Unknown',
   },
   pipelineCardBadge: '알람',
-  sourceLinkLabel: 'Alertmanager',
+  consoleLink: {
+    label: 'Grafana 알림 목록',
+    url: 'https://grafana.swkoo.kr/alerting/list',
+  },
   namespaceLabel: 'namespace',
 } as const;
 
