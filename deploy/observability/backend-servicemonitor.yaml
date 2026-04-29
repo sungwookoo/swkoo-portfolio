@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: swkoo-backend
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - swkoo
+  selector:
+    matchLabels:
+      app: swkoo-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: swkoo-backend-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: swkoo.backend
+      rules:
+        - alert: SwkooBackendDown
+          expr: up{job="swkoo-backend"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            namespace: swkoo
+            app: swkoo-backend
+          annotations:
+            summary: swkoo-backend is unreachable
+            description: Prometheus has been unable to scrape swkoo-backend /metrics for over 1 minute — pod down, networking, or readiness probe failing
+            runbook: 'kubectl get pods -n swkoo -l app=swkoo-backend; kubectl logs -n swkoo -l app=swkoo-backend --tail=100'
+
+        - alert: SwkooBackendHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="swkoo-backend", status_code=~"5.."}[5m]))
+              /
+            sum(rate(http_requests_total{job="swkoo-backend"}[5m])) > 0.02
+          for: 2m
+          labels:
+            severity: critical
+            namespace: swkoo
+            app: swkoo-backend
+          annotations:
+            summary: swkoo-backend 5xx error rate above 2%
+            description: 5xx error ratio has been above 2% for 2 minutes ({{ $value | printf "%.1f%%" }}) — check the latest deployment first
+            runbook: 'Roll back the latest backend image if it just shipped. Check kubectl logs -n swkoo -l app=swkoo-backend for stack traces.'
+
+        - alert: SwkooBackendHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (rate(http_request_duration_seconds_bucket{job="swkoo-backend"}[5m]))
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+            namespace: swkoo
+            app: swkoo-backend
+          annotations:
+            summary: swkoo-backend p95 latency above 1s
+            description: P95 request duration has been above 1 second for 5 minutes ({{ $value | printf "%.2fs" }}) — likely upstream (Argo CD / GitHub / Alertmanager) slowness
+            runbook: 'Check upstream API health. Inspect specific routes via http_request_duration_seconds{job="swkoo-backend"}.'

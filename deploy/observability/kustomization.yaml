@@ -8,3 +8,5 @@ resources:
   - swkoo-application-alerts.yaml
   - argocd-servicemonitor.yaml
   - argocd-alerts.yaml
+  - backend-servicemonitor.yaml
+  - backend-alerts.yaml

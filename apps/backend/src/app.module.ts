@@ -7,6 +7,7 @@ import { pipelinesConfig } from './config/pipelines.config';
 
 import { AlertsModule } from './alerts/alerts.module';
 import { HealthController } from './health/health.controller';
+import { MetricsModule } from './metrics/metrics.module';
 import { OverviewController } from './overview/overview.controller';
 import { OverviewService } from './overview/overview.service';
 import { PipelinesModule } from './pipelines/pipelines.module';
@@ -19,7 +20,8 @@ import { PipelinesModule } from './pipelines/pipelines.module';
       load: [pipelinesConfig, githubConfig, alertmanagerConfig]
     }),
     PipelinesModule,
-    AlertsModule
+    AlertsModule,
+    MetricsModule
   ],
   controllers: [HealthController, OverviewController],
   providers: [OverviewService]
