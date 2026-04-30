@@ -1,12 +1,43 @@
 import clsx from 'clsx';
 
-import type { DeploymentLifecycle } from '@/lib/types';
+import type { Alert, DeploymentLifecycle, DeploymentEvent } from '@/lib/types';
 import { deployments as content } from '@/content/observatory';
 
 interface DeploymentListProps {
   configured: boolean;
   pipeline: string;
   deployments: DeploymentLifecycle[];
+  alerts: Alert[];
+}
+
+function alertsInWindow(d: DeploymentLifecycle, alerts: Alert[]): Alert[] {
+  const start = new Date(d.startedAt).getTime();
+  const end = (d.endedAt ? new Date(d.endedAt).getTime() : Date.now()) + 5 * 60 * 1000;
+  if (Number.isNaN(start)) return [];
+  return alerts.filter((a) => {
+    if (!a.startsAt) return false;
+    const t = new Date(a.startsAt).getTime();
+    return t >= start && t <= end;
+  });
+}
+
+function eventColor(e: DeploymentEvent): string {
+  if (e.status === 'failure') return 'bg-rose-400';
+  if (e.status === 'in_progress') return 'bg-amber-400 animate-pulse';
+  return 'bg-emerald-400';
+}
+
+function alertColor(severity: Alert['severity']): string {
+  switch (severity) {
+    case 'critical':
+      return 'bg-rose-500 ring-rose-500/40';
+    case 'warning':
+      return 'bg-amber-400 ring-amber-400/40';
+    case 'info':
+      return 'bg-sky-400 ring-sky-400/40';
+    default:
+      return 'bg-slate-400 ring-slate-400/40';
+  }
 }
 
 function formatRelative(iso: string | null | undefined): string | null {
@@ -31,7 +62,7 @@ function formatDuration(startIso: string, endIso: string | null): string | null 
   return `${Math.floor(seconds / 3600)}시간 ${Math.floor((seconds % 3600) / 60)}분`;
 }
 
-export function DeploymentList({ configured, pipeline, deployments }: DeploymentListProps) {
+export function DeploymentList({ configured, pipeline, deployments, alerts }: DeploymentListProps) {
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -63,10 +94,23 @@ export function DeploymentList({ configured, pipeline, deployments }: Deployment
           {deployments.map((d) => {
             const duration = formatDuration(d.startedAt, d.endedAt);
             const relative = formatRelative(d.endedAt ?? d.startedAt);
+            const inWindow = alertsInWindow(d, alerts);
+            const startMs = new Date(d.startedAt).getTime();
+            const endMs = d.endedAt ? new Date(d.endedAt).getTime() : Date.now();
+            const totalMs = Math.max(endMs - startMs, 1);
+            const ratio = (iso: string) =>
+              Math.max(
+                0,
+                Math.min(100, ((new Date(iso).getTime() - startMs) / totalMs) * 100)
+              );
+            const hasAnyFailure = d.events.some((e) => e.status === 'failure');
             return (
               <li
                 key={`${d.commitSha}-${d.startedAt}`}
-                className="rounded-xl border-l-2 border-emerald-500/60 bg-slate-950 p-4"
+                className={clsx(
+                  'rounded-xl border-l-2 bg-slate-950 p-4',
+                  hasAnyFailure ? 'border-rose-500/60' : 'border-emerald-500/60'
+                )}
               >
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   {d.commitAuthorAvatar && (
@@ -103,59 +147,95 @@ export function DeploymentList({ configured, pipeline, deployments }: Deployment
                 </div>
 
                 {d.events.length > 0 && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    {d.events.map((e, i) => {
-                      const stageLabel = content.stageLabel[e.stage] ?? e.label;
-                      const durationText =
-                        e.durationSeconds && e.durationSeconds > 0
-                          ? e.durationSeconds < 60
-                            ? `${e.durationSeconds}s`
-                            : `${Math.floor(e.durationSeconds / 60)}m ${e.durationSeconds % 60}s`
-                          : null;
-                      return (
-                        <span key={i} className="inline-flex items-center gap-1">
-                          <span
-                            className={clsx(
-                              'inline-flex size-1.5 rounded-full',
-                              e.status === 'success' && 'bg-emerald-400',
-                              e.status === 'failure' && 'bg-rose-400',
-                              e.status === 'in_progress' && 'bg-amber-400 animate-pulse'
-                            )}
-                          />
-                          {e.href ? (
-                            <a
-                              href={e.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={clsx(
-                                'hover:text-slate-200',
-                                e.status === 'failure' ? 'text-rose-300' : 'text-slate-400'
-                              )}
-                            >
-                              {stageLabel}
-                              {durationText && (
-                                <span className="ml-1 text-slate-500">({durationText})</span>
-                              )}
-                            </a>
-                          ) : (
+                  <>
+                    {/* Horizontal timeline bar */}
+                    <div className="relative mt-4 h-8">
+                      <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-slate-800" />
+                      {d.events.map((e, i) => {
+                        const left = ratio(e.timestamp);
+                        const stageLabel = content.stageLabel[e.stage] ?? e.label;
+                        const dot = (
+                          <>
                             <span
                               className={clsx(
-                                e.status === 'failure' ? 'text-rose-300' : 'text-slate-400'
+                                'absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-slate-950',
+                                eventColor(e)
+                              )}
+                            />
+                            <span
+                              className={clsx(
+                                'absolute top-[calc(50%+0.65rem)] -translate-x-1/2 whitespace-nowrap text-[10px]',
+                                e.status === 'failure' ? 'text-rose-300' : 'text-slate-500'
                               )}
                             >
                               {stageLabel}
-                              {durationText && (
-                                <span className="ml-1 text-slate-500">({durationText})</span>
-                              )}
                             </span>
-                          )}
-                          {i < d.events.length - 1 && (
-                            <span className="text-slate-700">→</span>
-                          )}
+                          </>
+                        );
+                        return (
+                          <span key={`ev-${i}`} className="absolute inset-y-0" style={{ left: `${left}%` }}>
+                            {e.href ? (
+                              <a
+                                href={e.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`${stageLabel} — ${new Date(e.timestamp).toLocaleString('ko-KR')}`}
+                                className="block size-full"
+                              >
+                                {dot}
+                              </a>
+                            ) : (
+                              dot
+                            )}
+                          </span>
+                        );
+                      })}
+                      {/* Alert overlay markers */}
+                      {inWindow.map((a) => {
+                        if (!a.startsAt) return null;
+                        const left = ratio(a.startsAt);
+                        return (
+                          <span
+                            key={a.fingerprint}
+                            className="absolute top-1/2 -translate-x-1/2 -translate-y-[1.4rem] text-xs"
+                            style={{ left: `${left}%` }}
+                            title={`${a.alertname} — ${a.summary}`}
+                          >
+                            <span
+                              className={clsx(
+                                'inline-flex size-2 rounded-full ring-2',
+                                alertColor(a.severity)
+                              )}
+                            />
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {/* Per-stage chips with duration */}
+                    <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                      {d.events.map((e, i) => {
+                        const durationText =
+                          e.durationSeconds && e.durationSeconds > 0
+                            ? e.durationSeconds < 60
+                              ? `${e.durationSeconds}s`
+                              : `${Math.floor(e.durationSeconds / 60)}m ${e.durationSeconds % 60}s`
+                            : null;
+                        if (!durationText) return null;
+                        const stageLabel = content.stageLabel[e.stage] ?? e.label;
+                        return (
+                          <span key={`chip-${i}`}>
+                            {stageLabel}: <span className="text-slate-300">{durationText}</span>
+                          </span>
+                        );
+                      })}
+                      {inWindow.length > 0 && (
+                        <span className="text-amber-400">
+                          ⚠ {inWindow.length} alert{inWindow.length > 1 ? 's' : ''} during deploy window
                         </span>
-                      );
-                    })}
-                  </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </li>
             );

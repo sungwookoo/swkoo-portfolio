@@ -143,17 +143,21 @@ export default async function ObservatoryPage() {
         alerts={alertsEnvelope.alerts}
       />
 
-      {/* Recent Deployments (S1: per-pipeline list) */}
+      {/* Recent Deployments — cross-tool timeline (commit/build/sync) with alert overlay */}
       {pipelinesConfigured &&
         pipelines.map((pipeline) => {
           const env = deploymentsByPipeline.get(pipeline.name);
           if (!env) return null;
+          // Pass alerts associated with this pipeline (used for window overlay)
+          const pipelineAlerts =
+            alertsByPipeline.get(pipeline.name) ?? alertsEnvelope.alerts;
           return (
             <DeploymentList
               key={`deployments-${pipeline.name}`}
               configured={env.configured}
               pipeline={pipeline.name}
               deployments={env.deployments}
+              alerts={pipelineAlerts}
             />
           );
         })}
