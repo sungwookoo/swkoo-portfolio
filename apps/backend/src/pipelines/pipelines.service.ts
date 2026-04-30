@@ -219,7 +219,9 @@ export class PipelinesService {
     commit: CommitInfo | null,
     argocdBaseUrl: string | null
   ): DeploymentLifecycle {
-    const sha = history.revision ?? '';
+    // Prefer the commit we actually resolved (source if extractable, manifest
+    // if fallback). Keeps shortSha + href + label consistent.
+    const sha = commit?.sha ?? history.revision ?? '';
     const events: DeploymentEvent[] = [];
 
     if (commit?.authoredAt) {
