@@ -56,3 +56,24 @@ export interface WorkflowsEnvelope {
   };
 }
 
+export interface GitHubCommitResponse {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    author: { name?: string; email?: string; date?: string } | null;
+    committer: { name?: string; email?: string; date?: string } | null;
+  };
+  author: { login?: string; avatar_url?: string } | null;
+}
+
+export interface CommitInfo {
+  sha: string;
+  message: string;
+  authorName: string;
+  authorLogin: string | null;
+  authorAvatarUrl: string | null;
+  authoredAt: string;
+  htmlUrl: string;
+}
+

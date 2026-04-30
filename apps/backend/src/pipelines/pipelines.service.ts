@@ -10,8 +10,13 @@ import { ConfigType } from '@nestjs/config';
 import { githubConfig } from '../config/github.config';
 import { pipelinesConfig } from '../config/pipelines.config';
 import type { ArgoCdApplication } from './types/argo-cd.types';
-import type { WorkflowsEnvelope } from './types/github.types';
+import type { CommitInfo, WorkflowsEnvelope } from './types/github.types';
 import type { PipelineSummary, PipelinesEnvelope } from './pipelines.types';
+import type {
+  DeploymentEvent,
+  DeploymentLifecycle,
+  DeploymentsEnvelope
+} from './deployments.types';
 import { ArgoCdClient } from './services/argo-cd.client';
 import { GitHubClient } from './services/github.client';
 
@@ -136,6 +141,103 @@ export class PipelinesService {
       page: options.page,
       perPage: options.perPage
     });
+  }
+
+  async getDeployments(name: string, limit = 5): Promise<DeploymentsEnvelope> {
+    if (!this.argoCdClient.isConfigured()) {
+      return { configured: false, fetchedAt: null, pipeline: name, deployments: [] };
+    }
+
+    const application = await this.argoCdClient.getApplication(name);
+    if (!application) {
+      throw new NotFoundException(`Pipeline ${name} not found`);
+    }
+
+    const history = (application.status?.history ?? []).slice(-limit).reverse();
+    if (history.length === 0) {
+      return {
+        configured: true,
+        fetchedAt: new Date().toISOString(),
+        pipeline: name,
+        deployments: []
+      };
+    }
+
+    const repoUrl = application.spec.source?.repoURL ?? null;
+    const { owner, repo } = repoUrl
+      ? this.parseGitHubRepoUrl(repoUrl)
+      : { owner: null, repo: null };
+
+    // Fetch commit metadata in parallel. fetchCommit returns null on 404 / config issues.
+    const commits = await Promise.all(
+      history.map((h) =>
+        owner && repo && h.revision
+          ? this.githubClient.fetchCommit({
+              owner: this.githubCfg.owner ?? owner,
+              repo: this.githubCfg.repo ?? repo,
+              sha: h.revision
+            })
+          : Promise.resolve(null)
+      )
+    );
+
+    const argocdBaseUrl = this.config.baseUrl ?? null;
+    const deployments: DeploymentLifecycle[] = history.map((h, i) =>
+      this.toDeploymentLifecycle(name, h, commits[i], argocdBaseUrl)
+    );
+
+    return {
+      configured: true,
+      fetchedAt: new Date().toISOString(),
+      pipeline: name,
+      deployments
+    };
+  }
+
+  private toDeploymentLifecycle(
+    name: string,
+    history: { revision?: string; deployedAt?: string },
+    commit: CommitInfo | null,
+    argocdBaseUrl: string | null
+  ): DeploymentLifecycle {
+    const sha = history.revision ?? '';
+    const events: DeploymentEvent[] = [];
+
+    if (commit?.authoredAt) {
+      events.push({
+        stage: 'commit',
+        status: 'success',
+        timestamp: commit.authoredAt,
+        label: `commit ${sha.slice(0, 7)}`,
+        href: commit.htmlUrl
+      });
+    }
+
+    if (history.deployedAt) {
+      events.push({
+        stage: 'sync',
+        status: 'success',
+        timestamp: history.deployedAt,
+        label: 'Argo CD synced',
+        href: argocdBaseUrl ? `${argocdBaseUrl.replace(/\/$/, '')}/applications/${name}` : null
+      });
+    }
+
+    const startedAt = commit?.authoredAt ?? history.deployedAt ?? '';
+    const endedAt = history.deployedAt ?? null;
+
+    return {
+      pipeline: name,
+      commitSha: sha,
+      commitShort: sha.slice(0, 7),
+      commitMessage: commit?.message ?? '(commit not found on GitHub)',
+      commitAuthor: commit?.authorName ?? 'unknown',
+      commitAuthorAvatar: commit?.authorAvatarUrl ?? null,
+      commitHref: commit?.htmlUrl ?? null,
+      startedAt,
+      endedAt,
+      events
+    };
   }
 
   private parseGitHubRepoUrl(url: string): { owner: string | null; repo: string | null } {

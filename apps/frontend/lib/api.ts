@@ -1,5 +1,6 @@
 import type {
   AlertsEnvelope,
+  DeploymentsEnvelope,
   PipelinesEnvelope,
   PortfolioOverview,
   WorkflowsEnvelope
@@ -112,6 +113,41 @@ export async function fetchAlerts(): Promise<AlertsEnvelope> {
       fetchedAt: null,
       alerts: []
     };
+  }
+}
+
+export async function fetchDeployments(
+  pipelineName: string,
+  limit = 5
+): Promise<DeploymentsEnvelope> {
+  const empty: DeploymentsEnvelope = {
+    configured: false,
+    fetchedAt: null,
+    pipeline: pipelineName,
+    deployments: []
+  };
+
+  if (!API_BASE_URL) return empty;
+
+  try {
+    const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/deployments?limit=${limit}`;
+    const response = await fetch(url, { next: { revalidate: 60 } });
+
+    if (!response.ok) {
+      console.warn('Failed to load deployments', response.statusText);
+      return empty;
+    }
+
+    const payload = (await response.json()) as DeploymentsEnvelope;
+    return {
+      configured: Boolean(payload.configured),
+      fetchedAt: payload.fetchedAt ?? null,
+      pipeline: payload.pipeline ?? pipelineName,
+      deployments: Array.isArray(payload.deployments) ? payload.deployments : []
+    };
+  } catch (error) {
+    console.warn('Deployments request failed', error);
+    return empty;
   }
 }
 

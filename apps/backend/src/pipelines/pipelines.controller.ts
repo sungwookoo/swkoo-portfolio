@@ -3,6 +3,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { PipelinesService } from './pipelines.service';
 import type { PipelineSummary, PipelinesEnvelope } from './pipelines.types';
 import type { WorkflowsEnvelope } from './types/github.types';
+import type { DeploymentsEnvelope } from './deployments.types';
 
 @Controller('pipelines')
 export class PipelinesController {
@@ -30,5 +31,14 @@ export class PipelinesController {
       page: page ? parseInt(page, 10) : undefined,
       perPage: perPage ? parseInt(perPage, 10) : undefined
     });
+  }
+
+  @Get(':name/deployments')
+  async getDeployments(
+    @Param('name') name: string,
+    @Query('limit') limit?: string
+  ): Promise<DeploymentsEnvelope> {
+    const parsed = limit ? parseInt(limit, 10) : 5;
+    return this.pipelinesService.getDeployments(name, Number.isFinite(parsed) ? parsed : 5);
   }
 }

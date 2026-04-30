@@ -7,6 +7,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { githubConfig } from '../../config/github.config';
 import type {
+  CommitInfo,
+  GitHubCommitResponse,
   GitHubWorkflowRunsResponse,
   GitHubWorkflowsResponse,
   WorkflowRun,
@@ -19,6 +21,12 @@ interface FetchWorkflowsOptions {
   workflow?: string;
   page?: number;
   perPage?: number;
+}
+
+interface FetchCommitOptions {
+  owner: string;
+  repo: string;
+  sha: string;
 }
 
 @Injectable()
@@ -74,6 +82,38 @@ export class GitHubClient {
       };
     } catch (error: unknown) {
       this.handleError(error, 'fetching workflows');
+    }
+  }
+
+  async fetchCommit(options: FetchCommitOptions): Promise<CommitInfo | null> {
+    const { owner, repo, sha } = options;
+    if (!this.isConfigured() || !sha) return null;
+
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/commits/${sha}`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<GitHubCommitResponse>(url, { headers: this.buildHeaders() })
+      );
+      const data = response.data;
+      const authorMeta = data.commit.author ?? data.commit.committer;
+      return {
+        sha: data.sha,
+        message: data.commit.message.split('\n')[0] ?? '',
+        authorName: authorMeta?.name ?? data.author?.login ?? 'unknown',
+        authorLogin: data.author?.login ?? null,
+        authorAvatarUrl: data.author?.avatar_url ?? null,
+        authoredAt: authorMeta?.date ?? '',
+        htmlUrl: data.html_url
+      };
+    } catch (error: unknown) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        // Force-pushes / branch deletes can leave Argo CD history pointing at
+        // a SHA that no longer exists on the repo. Return null instead of
+        // failing the whole deployments query.
+        return null;
+      }
+      this.logger.warn(`Failed to fetch commit ${sha}: ${(error as Error).message}`);
+      return null;
     }
   }
 

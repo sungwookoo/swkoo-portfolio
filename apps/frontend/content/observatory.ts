@@ -33,6 +33,19 @@ export const alerts = {
   namespaceLabel: 'namespace',
 } as const;
 
+export const deployments = {
+  title: '최근 배포',
+  subtitle: 'Argo CD 동기화 이력에 GitHub commit 메타데이터를 결합',
+  empty: '아직 배포 이력이 없습니다',
+  unconfigured: 'Argo CD 자격 증명이 설정되지 않았습니다.',
+  unconfiguredHint: '백엔드 환경 변수 ARGOCD_BASE_URL / ARGOCD_AUTH_TOKEN 을 지정해주세요.',
+  stageLabel: {
+    commit: 'commit',
+    sync: 'Argo synced',
+  },
+  buildDuration: 'build → sync',
+} as const;
+
 export const legend = {
   title: '상태 범례',
   sections: [

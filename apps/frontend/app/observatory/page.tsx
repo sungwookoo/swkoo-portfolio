@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import clsx from 'clsx';
 
-import { fetchAlerts, fetchPipelines, fetchWorkflows } from '@/lib/api';
+import { fetchAlerts, fetchDeployments, fetchPipelines, fetchWorkflows } from '@/lib/api';
 import { AlertList } from '@/components/AlertList';
+import { DeploymentList } from '@/components/DeploymentList';
 import { PipelineCard } from '@/components/PipelineCard';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
 import {
@@ -82,6 +83,18 @@ export default async function ObservatoryPage() {
     }
   }
 
+  // Fetch recent deployment lifecycles for each pipeline (S1: simple list).
+  const deploymentsByPipeline = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchDeployments>>
+  >();
+  if (pipelinesConfigured && pipelines.length > 0) {
+    const results = await Promise.all(pipelines.map((p) => fetchDeployments(p.name, 5)));
+    pipelines.forEach((p, i) => {
+      deploymentsByPipeline.set(p.name, results[i]);
+    });
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
       {/* Hero */}
@@ -129,6 +142,21 @@ export default async function ObservatoryPage() {
         configured={alertsEnvelope.configured}
         alerts={alertsEnvelope.alerts}
       />
+
+      {/* Recent Deployments (S1: per-pipeline list) */}
+      {pipelinesConfigured &&
+        pipelines.map((pipeline) => {
+          const env = deploymentsByPipeline.get(pipeline.name);
+          if (!env) return null;
+          return (
+            <DeploymentList
+              key={`deployments-${pipeline.name}`}
+              configured={env.configured}
+              pipeline={pipeline.name}
+              deployments={env.deployments}
+            />
+          );
+        })}
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,200px),1fr]">
