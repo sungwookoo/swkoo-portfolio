@@ -52,6 +52,11 @@ export class AlertsService {
 
     const alerts = rawAlerts
       .filter((a) => (a.status?.state ?? 'active') === 'active')
+      // InfoInhibitor is a kube-prometheus-stack meta-alert that exists only
+      // to drive Alertmanager inhibit_rules. The default chart docs say to
+      // route it to a null receiver; ours doesn't, so it leaks into the
+      // active list and shows up to operators. Drop it here.
+      .filter((a) => a.labels?.alertname !== 'InfoInhibitor')
       .map((a) => this.toAlertSummary(a, pipelinesEnv.pipelines))
       .sort((a, b) => this.severityRank(a.severity) - this.severityRank(b.severity));
 
