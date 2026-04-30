@@ -41,9 +41,10 @@ export const deployments = {
   unconfiguredHint: '백엔드 환경 변수 ARGOCD_BASE_URL / ARGOCD_AUTH_TOKEN 을 지정해주세요.',
   stageLabel: {
     commit: 'commit',
+    build: 'CI build',
     sync: 'Argo synced',
   },
-  buildDuration: 'build → sync',
+  buildDuration: 'commit → ready',
 } as const;
 
 export const legend = {

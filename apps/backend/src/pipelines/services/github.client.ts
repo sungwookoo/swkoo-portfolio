@@ -85,6 +85,28 @@ export class GitHubClient {
     }
   }
 
+  async fetchWorkflowRunForSha(
+    options: { owner: string; repo: string; sha: string }
+  ): Promise<WorkflowRun | null> {
+    const { owner, repo, sha } = options;
+    if (!this.isConfigured() || !sha) return null;
+
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/actions/runs`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<GitHubWorkflowRunsResponse>(url, {
+          headers: this.buildHeaders(),
+          params: { head_sha: sha, per_page: 1 }
+        })
+      );
+      const run = response.data?.workflow_runs?.[0];
+      return run ? this.toWorkflowRun(run) : null;
+    } catch (error: unknown) {
+      this.logger.warn(`Failed to fetch workflow run for ${sha}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
   async fetchCommit(options: FetchCommitOptions): Promise<CommitInfo | null> {
     const { owner, repo, sha } = options;
     if (!this.isConfigured() || !sha) return null;

@@ -104,35 +104,57 @@ export function DeploymentList({ configured, pipeline, deployments }: Deployment
 
                 {d.events.length > 0 && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    {d.events.map((e, i) => (
-                      <span key={i} className="inline-flex items-center gap-1">
-                        <span
-                          className={clsx(
-                            'inline-flex size-1.5 rounded-full',
-                            e.status === 'success' && 'bg-emerald-400',
-                            e.status === 'failure' && 'bg-rose-400',
-                            e.status === 'in_progress' && 'bg-sky-400'
+                    {d.events.map((e, i) => {
+                      const stageLabel = content.stageLabel[e.stage] ?? e.label;
+                      const durationText =
+                        e.durationSeconds && e.durationSeconds > 0
+                          ? e.durationSeconds < 60
+                            ? `${e.durationSeconds}s`
+                            : `${Math.floor(e.durationSeconds / 60)}m ${e.durationSeconds % 60}s`
+                          : null;
+                      return (
+                        <span key={i} className="inline-flex items-center gap-1">
+                          <span
+                            className={clsx(
+                              'inline-flex size-1.5 rounded-full',
+                              e.status === 'success' && 'bg-emerald-400',
+                              e.status === 'failure' && 'bg-rose-400',
+                              e.status === 'in_progress' && 'bg-amber-400 animate-pulse'
+                            )}
+                          />
+                          {e.href ? (
+                            <a
+                              href={e.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={clsx(
+                                'hover:text-slate-200',
+                                e.status === 'failure' ? 'text-rose-300' : 'text-slate-400'
+                              )}
+                            >
+                              {stageLabel}
+                              {durationText && (
+                                <span className="ml-1 text-slate-500">({durationText})</span>
+                              )}
+                            </a>
+                          ) : (
+                            <span
+                              className={clsx(
+                                e.status === 'failure' ? 'text-rose-300' : 'text-slate-400'
+                              )}
+                            >
+                              {stageLabel}
+                              {durationText && (
+                                <span className="ml-1 text-slate-500">({durationText})</span>
+                              )}
+                            </span>
                           )}
-                        />
-                        {e.href ? (
-                          <a
-                            href={e.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-slate-200"
-                          >
-                            {content.stageLabel[e.stage] ?? e.label}
-                          </a>
-                        ) : (
-                          <span className="text-slate-400">
-                            {content.stageLabel[e.stage] ?? e.label}
-                          </span>
-                        )}
-                        {i < d.events.length - 1 && (
-                          <span className="text-slate-700">→</span>
-                        )}
-                      </span>
-                    ))}
+                          {i < d.events.length - 1 && (
+                            <span className="text-slate-700">→</span>
+                          )}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </li>

@@ -1,10 +1,11 @@
-export type DeploymentStage = 'commit' | 'sync';
+export type DeploymentStage = 'commit' | 'build' | 'sync';
 export type DeploymentStageStatus = 'success' | 'failure' | 'in_progress';
 
 export interface DeploymentEvent {
   stage: DeploymentStage;
   status: DeploymentStageStatus;
   timestamp: string;
+  durationSeconds: number | null;
   label: string;
   href: string | null;
 }

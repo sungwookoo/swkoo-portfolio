@@ -10,7 +10,7 @@ import { ConfigType } from '@nestjs/config';
 import { githubConfig } from '../config/github.config';
 import { pipelinesConfig } from '../config/pipelines.config';
 import type { ArgoCdApplication } from './types/argo-cd.types';
-import type { CommitInfo, WorkflowsEnvelope } from './types/github.types';
+import type { CommitInfo, WorkflowRun, WorkflowsEnvelope } from './types/github.types';
 import type { PipelineSummary, PipelinesEnvelope } from './pipelines.types';
 import type {
   DeploymentEvent,
@@ -186,18 +186,35 @@ export class PipelinesService {
       )
     );
 
+    const sourceShas = manifestCommits.map((mc) => (mc ? this.extractSourceSha(mc.message) : null));
+
     const sourceCommits = await Promise.all(
-      manifestCommits.map((mc) => {
-        const sourceSha = mc ? this.extractSourceSha(mc.message) : null;
-        return sourceSha && ghOwner && ghRepo
-          ? this.githubClient.fetchCommit({ owner: ghOwner, repo: ghRepo, sha: sourceSha })
-          : Promise.resolve(null);
-      })
+      sourceShas.map((sha) =>
+        sha && ghOwner && ghRepo
+          ? this.githubClient.fetchCommit({ owner: ghOwner, repo: ghRepo, sha })
+          : Promise.resolve(null)
+      )
+    );
+
+    // For each resolved source commit, find the GitHub Actions run that built
+    // its image. CI is keyed on head_sha so this is a single lookup per entry.
+    const workflowRuns = await Promise.all(
+      sourceShas.map((sha) =>
+        sha && ghOwner && ghRepo
+          ? this.githubClient.fetchWorkflowRunForSha({ owner: ghOwner, repo: ghRepo, sha })
+          : Promise.resolve(null)
+      )
     );
 
     const argocdBaseUrl = this.config.baseUrl ?? null;
     const deployments: DeploymentLifecycle[] = history.map((h, i) =>
-      this.toDeploymentLifecycle(name, h, sourceCommits[i] ?? manifestCommits[i], argocdBaseUrl)
+      this.toDeploymentLifecycle(
+        name,
+        h,
+        sourceCommits[i] ?? manifestCommits[i],
+        workflowRuns[i],
+        argocdBaseUrl
+      )
     );
 
     return {
@@ -217,6 +234,7 @@ export class PipelinesService {
     name: string,
     history: { revision?: string; deployedAt?: string },
     commit: CommitInfo | null,
+    workflowRun: WorkflowRun | null,
     argocdBaseUrl: string | null
   ): DeploymentLifecycle {
     // Prefer the commit we actually resolved (source if extractable, manifest
@@ -229,8 +247,28 @@ export class PipelinesService {
         stage: 'commit',
         status: 'success',
         timestamp: commit.authoredAt,
+        durationSeconds: null,
         label: `commit ${sha.slice(0, 7)}`,
         href: commit.htmlUrl
+      });
+    }
+
+    if (workflowRun) {
+      const buildStatus: DeploymentEvent['status'] =
+        workflowRun.status !== 'completed'
+          ? 'in_progress'
+          : workflowRun.conclusion === 'success'
+          ? 'success'
+          : workflowRun.conclusion === 'failure' || workflowRun.conclusion === 'cancelled'
+          ? 'failure'
+          : 'success';
+      events.push({
+        stage: 'build',
+        status: buildStatus,
+        timestamp: workflowRun.updatedAt,
+        durationSeconds: workflowRun.runDurationSeconds,
+        label: workflowRun.name || 'CI build',
+        href: workflowRun.htmlUrl
       });
     }
 
@@ -239,6 +277,7 @@ export class PipelinesService {
         stage: 'sync',
         status: 'success',
         timestamp: history.deployedAt,
+        durationSeconds: null,
         label: 'Argo CD synced',
         href: argocdBaseUrl ? `${argocdBaseUrl.replace(/\/$/, '')}/applications/${name}` : null
       });
