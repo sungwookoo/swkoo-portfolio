@@ -44,7 +44,9 @@
 | GitHub Actions run 요약 표시 | ✅ | ③ 관측 — OK |
 | Mermaid 아키텍처 다이어그램 | ✅ | A(설계 설명) — OK |
 | Alertmanager → Discord 연동 | ✅ | 인프라 측 |
-| swkoo namespace 커스텀 알람 규칙 (5개) | ✅ | 인프라 측 |
+| swkoo + ArgoCD + backend SLO 알람 규칙 (총 13개) | ✅ | 인프라 측 — `deploy/observability/` 별도 Argo CD app 으로 관리 |
+| Backend `/metrics` (prom-client) + ServiceMonitor | ✅ | 인프라 측 — http_requests_total / http_request_duration_seconds |
+| ArgoCD 메트릭 ServiceMonitor 3종 (controller / server / repo) | ✅ | 인프라 측 |
 
 ### Phase 2.5 – 고유 가치 확립 🎯 **현재 우선순위**
 
@@ -52,8 +54,8 @@ VISION §2의 핵심(cross-tool 타임라인 + 알람 overlay)에 가장 직접 
 
 | 항목 | 상태 | 심사 결과 |
 |---|---|---|
-| 활성 알람 overlay를 Observatory에 표시 (Alertmanager API) | ☐ | ② 경계 잇기 — **핵심** |
-| 배포 1건 단위로 `commit → run → image → sync → pod` 연결 뷰 | ☐ | ② 경계 잇기 — **핵심** |
+| 활성 알람 overlay를 Observatory에 표시 (Alertmanager API) | ✅ | ② 경계 잇기 — **핵심** |
+| 배포 1건 단위로 `commit → run → image → sync → pod` 연결 뷰 | ☐ | ② 경계 잇기 — **핵심** ← 다음 우선순위 |
 
 ### Phase 3 – 이벤트 스토어 & 히스토리 🚧
 
