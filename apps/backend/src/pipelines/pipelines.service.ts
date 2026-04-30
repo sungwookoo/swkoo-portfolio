@@ -168,22 +168,36 @@ export class PipelinesService {
       ? this.parseGitHubRepoUrl(repoUrl)
       : { owner: null, repo: null };
 
-    // Fetch commit metadata in parallel. fetchCommit returns null on 404 / config issues.
-    const commits = await Promise.all(
+    const ghOwner = this.githubCfg.owner ?? owner;
+    const ghRepo = this.githubCfg.repo ?? repo;
+
+    // Argo CD's history.revision is the *manifest* commit (the auto-commit
+    // CI made when it bumped image tags), not the source commit a human
+    // pushed. The manifest commit's message follows the pattern
+    //   "chore: update image tags to <40-char-source-sha>"
+    // so we lift the source SHA out of it. If extraction fails (manifest
+    // edited by hand, different message format), we fall back to the
+    // manifest commit so the lifecycle still shows something.
+    const manifestCommits = await Promise.all(
       history.map((h) =>
-        owner && repo && h.revision
-          ? this.githubClient.fetchCommit({
-              owner: this.githubCfg.owner ?? owner,
-              repo: this.githubCfg.repo ?? repo,
-              sha: h.revision
-            })
+        ghOwner && ghRepo && h.revision
+          ? this.githubClient.fetchCommit({ owner: ghOwner, repo: ghRepo, sha: h.revision })
           : Promise.resolve(null)
       )
     );
 
+    const sourceCommits = await Promise.all(
+      manifestCommits.map((mc) => {
+        const sourceSha = mc ? this.extractSourceSha(mc.message) : null;
+        return sourceSha && ghOwner && ghRepo
+          ? this.githubClient.fetchCommit({ owner: ghOwner, repo: ghRepo, sha: sourceSha })
+          : Promise.resolve(null);
+      })
+    );
+
     const argocdBaseUrl = this.config.baseUrl ?? null;
     const deployments: DeploymentLifecycle[] = history.map((h, i) =>
-      this.toDeploymentLifecycle(name, h, commits[i], argocdBaseUrl)
+      this.toDeploymentLifecycle(name, h, sourceCommits[i] ?? manifestCommits[i], argocdBaseUrl)
     );
 
     return {
@@ -192,6 +206,11 @@ export class PipelinesService {
       pipeline: name,
       deployments
     };
+  }
+
+  private extractSourceSha(commitMessage: string): string | null {
+    const match = commitMessage.match(/update image tags? to ([0-9a-f]{7,40})/i);
+    return match ? match[1] : null;
   }
 
   private toDeploymentLifecycle(
