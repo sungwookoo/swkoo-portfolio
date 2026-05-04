@@ -3,8 +3,7 @@ import clsx from 'clsx';
 
 import { fetchAlerts, fetchDeployments, fetchPipelines, fetchWorkflows } from '@/lib/api';
 import { AlertList } from '@/components/AlertList';
-import { DeploymentList } from '@/components/DeploymentList';
-import { PipelineCard } from '@/components/PipelineCard';
+import { PipelineSection } from '@/components/PipelineSection';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
 import {
   architecture,
@@ -43,9 +42,9 @@ function formatTimestamp(timestamp: string | null | undefined) {
 
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
-    <li className="flex items-center gap-2">
+    <li className="flex items-center gap-1.5">
       <span className={clsx('inline-flex size-2 rounded-full', color)}></span>
-      {label}
+      <span>{label}</span>
     </li>
   );
 }
@@ -143,100 +142,54 @@ export default async function ObservatoryPage() {
         alerts={alertsEnvelope.alerts}
       />
 
-      {/* Recent Deployments — cross-tool timeline (commit/build/sync) with alert overlay */}
-      {pipelinesConfigured &&
-        pipelines.map((pipeline) => {
-          const env = deploymentsByPipeline.get(pipeline.name);
-          if (!env) return null;
-          // Pass alerts associated with this pipeline (used for window overlay)
-          const pipelineAlerts =
-            alertsByPipeline.get(pipeline.name) ?? alertsEnvelope.alerts;
-          return (
-            <DeploymentList
-              key={`deployments-${pipeline.name}`}
-              configured={env.configured}
-              pipeline={pipeline.name}
-              deployments={env.deployments}
-              alerts={pipelineAlerts}
-            />
-          );
-        })}
-
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,200px),1fr]">
-        {/* Sidebar - Legend */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
-            <p className="font-semibold text-slate-200">{legend.title}</p>
-            <div className="mt-3 space-y-4">
-              {legend.sections.map((section) => (
-                <div key={section.title}>
-                  <p className="text-xs uppercase tracking-widest text-slate-500">
-                    {section.title}
-                  </p>
-                  <ul className="mt-2 space-y-2 text-slate-300">
-                    {section.items.map((item) => (
-                      <LegendItem
-                        key={`${section.title}-${item.label}`}
-                        color={item.color}
-                        label={item.label}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+      {/* Pipelines — accordion list (one row per pipeline; auto-open on issues) */}
+      <section className="space-y-3">
+        {!pipelinesConfigured ? (
+          <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
+            <p className="text-lg text-slate-400">
+              {emptyStates.unconfiguredTitle}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {emptyStates.unconfiguredHintPrefix}{' '}
+              <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
+                {emptyStates.unconfiguredHintEnvVars[0]}
+              </code>{' '}
+              과{' '}
+              <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
+                {emptyStates.unconfiguredHintEnvVars[1]}
+              </code>
+              {emptyStates.unconfiguredHintSuffix}
+            </p>
           </div>
-        </aside>
-
-        {/* Pipeline Cards */}
-        <section className="space-y-6">
-          {!pipelinesConfigured ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
-              <p className="text-lg text-slate-400">
-                {emptyStates.unconfiguredTitle}
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                {emptyStates.unconfiguredHintPrefix}{' '}
-                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
-                  {emptyStates.unconfiguredHintEnvVars[0]}
-                </code>{' '}
-                과{' '}
-                <code className="rounded bg-slate-800 px-1 py-0.5 text-xs text-slate-200">
-                  {emptyStates.unconfiguredHintEnvVars[1]}
-                </code>
-                {emptyStates.unconfiguredHintSuffix}
-              </p>
-            </div>
-          ) : pipelines.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
-              <p className="text-lg text-slate-400">
-                {emptyStates.noPipelinesTitle}
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                {emptyStates.noPipelinesHint}
-              </p>
-            </div>
-          ) : (
-            pipelines.map((pipeline) => (
-              <PipelineCard
-                key={pipeline.name}
-                pipeline={pipeline}
-                workflowsEnvelope={
-                  workflowsMap.get(pipeline.name) ?? {
-                    configured: false,
-                    repoUrl: null,
-                    workflows: [],
-                    runs: [],
-                    pagination: { page: 1, perPage: 10, total: 0 },
-                  }
+        ) : pipelines.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center">
+            <p className="text-lg text-slate-400">
+              {emptyStates.noPipelinesTitle}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {emptyStates.noPipelinesHint}
+            </p>
+          </div>
+        ) : (
+          pipelines.map((pipeline) => (
+            <PipelineSection
+              key={pipeline.name}
+              pipeline={pipeline}
+              workflowsEnvelope={
+                workflowsMap.get(pipeline.name) ?? {
+                  configured: false,
+                  repoUrl: null,
+                  workflows: [],
+                  runs: [],
+                  pagination: { page: 1, perPage: 10, total: 0 },
                 }
-                relatedAlerts={alertsByPipeline.get(pipeline.name) ?? []}
-              />
-            ))
-          )}
-        </section>
-      </div>
+              }
+              deploymentsEnvelope={deploymentsByPipeline.get(pipeline.name)}
+              relatedAlerts={alertsByPipeline.get(pipeline.name) ?? []}
+            />
+          ))
+        )}
+      </section>
 
       {/* Problem Definition */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
@@ -427,6 +380,31 @@ export default async function ObservatoryPage() {
               </h3>
               <p className="mt-2 text-sm text-slate-300">{item.reason}</p>
               <p className="mt-2 text-sm text-slate-500">리스크: {item.risk}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Legend (compact footer reference) */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+          {legend.title}
+        </p>
+        <div className="flex flex-wrap gap-x-8 gap-y-3">
+          {legend.sections.map((section) => (
+            <div key={section.title} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-xs uppercase tracking-wider text-slate-500">
+                {section.title}
+              </span>
+              <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-300">
+                {section.items.map((item) => (
+                  <LegendItem
+                    key={`${section.title}-${item.label}`}
+                    color={item.color}
+                    label={item.label}
+                  />
+                ))}
+              </ul>
             </div>
           ))}
         </div>
