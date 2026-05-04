@@ -119,3 +119,13 @@ export interface DeploymentsEnvelope {
   pipeline: string;
   deployments: DeploymentLifecycle[];
 }
+
+// Event store summary (from backend SQLite event store)
+export interface EventSummary {
+  pipelineName: string;
+  windowDays: number;
+  deployCount: number;
+  failureCount: number;
+  lastEventAt: string | null;
+  lastEventType: string | null;
+}

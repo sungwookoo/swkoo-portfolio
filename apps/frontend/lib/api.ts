@@ -1,6 +1,7 @@
 import type {
   AlertsEnvelope,
   DeploymentsEnvelope,
+  EventSummary,
   PipelinesEnvelope,
   PortfolioOverview,
   WorkflowsEnvelope
@@ -148,6 +149,25 @@ export async function fetchDeployments(
   } catch (error) {
     console.warn('Deployments request failed', error);
     return empty;
+  }
+}
+
+export async function fetchEventSummary(
+  pipelineName: string,
+  windowDays = 7
+): Promise<EventSummary | null> {
+  if (!API_BASE_URL) return null;
+  try {
+    const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/event-summary?windowDays=${windowDays}`;
+    const response = await fetch(url, { next: { revalidate: 30 } });
+    if (!response.ok) {
+      console.warn('Failed to load event summary', response.statusText);
+      return null;
+    }
+    return (await response.json()) as EventSummary;
+  } catch (error) {
+    console.warn('Event summary request failed', error);
+    return null;
   }
 }
 

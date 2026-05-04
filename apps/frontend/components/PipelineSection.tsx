@@ -6,6 +6,7 @@ import type {
   DeploymentLifecycle,
   DeploymentsEnvelope,
   DeploymentStage,
+  EventSummary,
   PipelineSummary,
   WorkflowsEnvelope,
 } from '@/lib/types';
@@ -18,6 +19,7 @@ interface PipelineSectionProps {
   pipeline: PipelineSummary;
   workflowsEnvelope: WorkflowsEnvelope;
   deploymentsEnvelope: DeploymentsEnvelope | undefined;
+  eventSummary: EventSummary | null;
   relatedAlerts: Alert[];
 }
 
@@ -120,6 +122,7 @@ export function PipelineSection({
   pipeline,
   workflowsEnvelope,
   deploymentsEnvelope,
+  eventSummary,
   relatedAlerts,
 }: PipelineSectionProps) {
   const latestDeployment = deploymentsEnvelope?.deployments[0];
@@ -129,6 +132,12 @@ export function PipelineSection({
   const relative = formatRelative(
     latestDeployment?.endedAt ?? latestDeployment?.startedAt ?? pipeline.lastDeployedAt
   );
+  const lastEventRelative = formatRelative(eventSummary?.lastEventAt);
+  const hasEventSignal =
+    eventSummary !== null &&
+    (eventSummary.deployCount > 0 ||
+      eventSummary.failureCount > 0 ||
+      eventSummary.lastEventAt !== null);
 
   return (
     <details
@@ -185,6 +194,31 @@ export function PipelineSection({
           )}
           {relative && (
             <span className="text-slate-500">· {relative}</span>
+          )}
+          {hasEventSignal && eventSummary && (
+            <span
+              className="text-slate-500"
+              title={`최근 ${eventSummary.windowDays}일 이벤트 스토어 기록`}
+            >
+              ·{' '}
+              <span className="text-slate-300">
+                {eventSummary.windowDays}일 {eventSummary.deployCount}회
+              </span>
+              {eventSummary.failureCount > 0 && (
+                <>
+                  {' '}
+                  <span className="text-rose-300">
+                    ⚠ {eventSummary.failureCount} 실패
+                  </span>
+                </>
+              )}
+              {lastEventRelative && (
+                <>
+                  {' · 마지막 '}
+                  <span className="text-slate-300">{lastEventRelative}</span>
+                </>
+              )}
+            </span>
           )}
         </span>
       </summary>

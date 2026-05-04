@@ -28,6 +28,15 @@ export interface DeploymentEventRow {
   rawJson: string;
 }
 
+export interface EventSummary {
+  pipelineName: string;
+  windowDays: number;
+  deployCount: number;
+  failureCount: number;
+  lastEventAt: string | null;
+  lastEventType: string | null;
+}
+
 @Injectable()
 export class EventsRepository implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsRepository.name);
@@ -92,5 +101,34 @@ export class EventsRepository implements OnModuleInit, OnModuleDestroy {
       LIMIT ?
     `);
     return stmt.all(limit) as DeploymentEventRow[];
+  }
+
+  summary(pipelineName: string, windowDays = 7): EventSummary {
+    const sinceIso = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+      .toISOString();
+    const counts = this.db.prepare(`
+      SELECT
+        SUM(CASE WHEN event_type = 'sync_succeeded' THEN 1 ELSE 0 END) AS deploys,
+        SUM(CASE WHEN event_type = 'sync_failed' THEN 1 ELSE 0 END) AS failures
+      FROM deployment_events
+      WHERE pipeline_name = ? AND received_at >= ?
+    `).get(pipelineName, sinceIso) as { deploys: number | null; failures: number | null };
+
+    const last = this.db.prepare(`
+      SELECT received_at AS receivedAt, event_type AS eventType
+      FROM deployment_events
+      WHERE pipeline_name = ?
+      ORDER BY received_at DESC
+      LIMIT 1
+    `).get(pipelineName) as { receivedAt: string; eventType: string } | undefined;
+
+    return {
+      pipelineName,
+      windowDays,
+      deployCount: counts.deploys ?? 0,
+      failureCount: counts.failures ?? 0,
+      lastEventAt: last?.receivedAt ?? null,
+      lastEventType: last?.eventType ?? null
+    };
   }
 }

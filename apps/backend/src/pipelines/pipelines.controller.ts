@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 
+import { EventsRepository, type EventSummary } from '../events/events.repository';
 import { PipelinesService } from './pipelines.service';
 import type { PipelineSummary, PipelinesEnvelope } from './pipelines.types';
 import type { WorkflowsEnvelope } from './types/github.types';
@@ -7,7 +8,10 @@ import type { DeploymentsEnvelope } from './deployments.types';
 
 @Controller('pipelines')
 export class PipelinesController {
-  constructor(private readonly pipelinesService: PipelinesService) {}
+  constructor(
+    private readonly pipelinesService: PipelinesService,
+    private readonly events: EventsRepository
+  ) {}
 
   @Get()
   async listPipelines(): Promise<PipelinesEnvelope> {
@@ -40,5 +44,15 @@ export class PipelinesController {
   ): Promise<DeploymentsEnvelope> {
     const parsed = limit ? parseInt(limit, 10) : 5;
     return this.pipelinesService.getDeployments(name, Number.isFinite(parsed) ? parsed : 5);
+  }
+
+  @Get(':name/event-summary')
+  getEventSummary(
+    @Param('name') name: string,
+    @Query('windowDays') windowDays?: string
+  ): EventSummary {
+    const parsed = windowDays ? parseInt(windowDays, 10) : 7;
+    const days = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+    return this.events.summary(name, days);
   }
 }

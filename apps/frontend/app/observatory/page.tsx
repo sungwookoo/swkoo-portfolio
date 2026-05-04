@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
 import clsx from 'clsx';
 
-import { fetchAlerts, fetchDeployments, fetchPipelines, fetchWorkflows } from '@/lib/api';
+import {
+  fetchAlerts,
+  fetchDeployments,
+  fetchEventSummary,
+  fetchPipelines,
+  fetchWorkflows,
+} from '@/lib/api';
 import { AlertList } from '@/components/AlertList';
 import { PipelineSection } from '@/components/PipelineSection';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
@@ -91,6 +97,18 @@ export default async function ObservatoryPage() {
     const results = await Promise.all(pipelines.map((p) => fetchDeployments(p.name, 5)));
     pipelines.forEach((p, i) => {
       deploymentsByPipeline.set(p.name, results[i]);
+    });
+  }
+
+  // Phase 3 S4-A: 7-day event-store summary per pipeline (count, last event).
+  const eventSummaryByPipeline = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchEventSummary>>
+  >();
+  if (pipelinesConfigured && pipelines.length > 0) {
+    const results = await Promise.all(pipelines.map((p) => fetchEventSummary(p.name, 7)));
+    pipelines.forEach((p, i) => {
+      eventSummaryByPipeline.set(p.name, results[i]);
     });
   }
 
@@ -185,6 +203,7 @@ export default async function ObservatoryPage() {
                 }
               }
               deploymentsEnvelope={deploymentsByPipeline.get(pipeline.name)}
+              eventSummary={eventSummaryByPipeline.get(pipeline.name) ?? null}
               relatedAlerts={alertsByPipeline.get(pipeline.name) ?? []}
             />
           ))
