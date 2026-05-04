@@ -50,7 +50,7 @@ data:
       discord:
         method: POST
         body: |
-          {"embeds":[{"title":"✅ {{.app.metadata.name}} synced","description":"`{{slice .app.status.sync.revision 0 7}}` · {{.app.status.health.status}}","color":5763719}]}
+          {"embeds":[{"title":"✅ {{.app.metadata.name}} synced","description":"`{{printf "%.7s" .app.status.sync.revision}}` · {{.app.status.health.status}}","color":5763719}]}
 
   template.swkoo-sync-failed: |
     webhook:
@@ -61,7 +61,7 @@ data:
       discord:
         method: POST
         body: |
-          {"embeds":[{"title":"❌ {{.app.metadata.name}} sync failed","description":"`{{slice .app.status.sync.revision 0 7}}` · phase {{.app.status.operationState.phase}}","color":15548997}]}
+          {"embeds":[{"title":"❌ {{.app.metadata.name}} sync failed","description":"`{{printf "%.7s" .app.status.sync.revision}}` · phase {{.app.status.operationState.phase}}","color":15548997}]}
 
   template.swkoo-health-degraded: |
     webhook:
