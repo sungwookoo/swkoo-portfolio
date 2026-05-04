@@ -16,6 +16,14 @@ data:
       - name: X-Webhook-Secret
         value: $argocd-webhook-secret-swkoo
 
+  # Discord webhook URL is read from argocd-notifications-secret
+  # (key: discord-url) so the URL never lives in git.
+  service.webhook.discord: |
+    url: $discord-url
+    headers:
+      - name: Content-Type
+        value: application/json
+
   # ── Triggers: when ArgoCD should fire a notification ─────────────────
   trigger.on-sync-succeeded: |
     - description: Application syncing has succeeded
@@ -39,6 +47,10 @@ data:
         method: POST
         body: |
           {"app":"{{.app.metadata.name}}","revision":"{{.app.status.sync.revision}}","syncStatus":"{{.app.status.sync.status}}","healthStatus":"{{.app.status.health.status}}","eventType":"sync_succeeded"}
+      discord:
+        method: POST
+        body: |
+          {"embeds":[{"title":"✅ {{.app.metadata.name}} synced","description":"`{{slice .app.status.sync.revision 0 7}}` · {{.app.status.health.status}}","color":5763719}]}
 
   template.swkoo-sync-failed: |
     webhook:
@@ -46,6 +58,10 @@ data:
         method: POST
         body: |
           {"app":"{{.app.metadata.name}}","revision":"{{.app.status.sync.revision}}","syncStatus":"{{.app.status.sync.status}}","healthStatus":"{{.app.status.health.status}}","eventType":"sync_failed"}
+      discord:
+        method: POST
+        body: |
+          {"embeds":[{"title":"❌ {{.app.metadata.name}} sync failed","description":"`{{slice .app.status.sync.revision 0 7}}` · phase {{.app.status.operationState.phase}}","color":15548997}]}
 
   template.swkoo-health-degraded: |
     webhook:
@@ -53,3 +69,7 @@ data:
         method: POST
         body: |
           {"app":"{{.app.metadata.name}}","revision":"{{.app.status.sync.revision}}","syncStatus":"{{.app.status.sync.status}}","healthStatus":"{{.app.status.health.status}}","eventType":"health_degraded"}
+      discord:
+        method: POST
+        body: |
+          {"embeds":[{"title":"⚠️ {{.app.metadata.name}} health degraded","description":"sync `{{.app.status.sync.status}}` · health `{{.app.status.health.status}}`","color":16705372}]}

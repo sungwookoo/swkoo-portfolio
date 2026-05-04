@@ -7,6 +7,9 @@ metadata:
     notifications.argoproj.io/subscribe.on-sync-succeeded.swkoo-backend: ""
     notifications.argoproj.io/subscribe.on-sync-failed.swkoo-backend: ""
     notifications.argoproj.io/subscribe.on-health-degraded.swkoo-backend: ""
+    notifications.argoproj.io/subscribe.on-sync-succeeded.discord: ""
+    notifications.argoproj.io/subscribe.on-sync-failed.discord: ""
+    notifications.argoproj.io/subscribe.on-health-degraded.discord: ""
 spec:
   project: default
   source:
