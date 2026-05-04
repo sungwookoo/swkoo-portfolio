@@ -7,6 +7,11 @@ metadata:
     app: swkoo-backend
 spec:
   replicas: 1
+  # Recreate (not RollingUpdate) because the SQLite PVC is ReadWriteOnce and
+  # a single-node cluster can't attach the volume to a new Pod while the old
+  # one still holds it. Trade-off: ~5s downtime on each backend rollout.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: swkoo-backend
@@ -17,6 +22,10 @@ spec:
     spec:
       imagePullSecrets:
         - name: ocir-credentials
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: swkoo-backend-data
       containers:
         - name: backend
           image: nrt.ocir.io/nrznn4yiltsz/swkoo/backend:5f4011a55e889022e51e89dcb2d03bb3bb444ca7
@@ -24,9 +33,14 @@ spec:
           ports:
             - containerPort: 3000
               name: http
+          volumeMounts:
+            - name: data
+              mountPath: /data
           env:
             - name: PORT
               value: "3000"
+            - name: OBSERVATORY_DB_PATH
+              value: "/data/observatory.sqlite"
             # Alertmanager in-cluster URL. Defaults below assume kube-prometheus-stack;
             # confirm actual service name with: kubectl get svc -n monitoring
             # Common candidates:
