@@ -3,6 +3,10 @@ kind: Application
 metadata:
   name: swkoo-portfolio
   namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.webhook: swkoo-backend
+    notifications.argoproj.io/subscribe.on-sync-failed.webhook: swkoo-backend
+    notifications.argoproj.io/subscribe.on-health-degraded.webhook: swkoo-backend
 spec:
   project: default
   source:
