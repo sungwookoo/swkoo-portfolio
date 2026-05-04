@@ -1,7 +1,9 @@
 export const hero = {
-  title: 'Self-hosted GitOps experiment',
-  description:
-    'Single-operator k3s 클러스터에서 배포 파이프라인을 운영하고, 친구의 앱을 호스팅하는 실험 공간.',
+  title: 'GitOps 인프라 운영 사례',
+  description: [
+    'OCI A1 단일 노드 k3s 위에서 Argo CD · GitHub Actions · Prometheus 스택을 직접 설계·운영합니다.',
+    '배포 흐름과 알람 신호를 한 화면에서 판단합니다.',
+  ],
   ctaLabel: 'Observatory 열기',
 } as const;
 
