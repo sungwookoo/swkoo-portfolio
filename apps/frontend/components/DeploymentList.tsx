@@ -6,8 +6,22 @@ import { deployments as content } from '@/content/observatory';
 interface DeploymentListProps {
   configured: boolean;
   pipeline: string;
+  namespace: string | null;
   deployments: DeploymentLifecycle[];
   alerts: Alert[];
+}
+
+function buildGrafanaLink(d: DeploymentLifecycle, namespace: string): string {
+  const { dashboardUrl, preWindowMs, postWindowMs } = content.grafanaLink;
+  const startMs = new Date(d.startedAt).getTime() - preWindowMs;
+  const endMs =
+    (d.endedAt ? new Date(d.endedAt).getTime() : Date.now()) + postWindowMs;
+  const params = new URLSearchParams({
+    from: String(startMs),
+    to: String(endMs),
+    'var-namespace': namespace,
+  });
+  return `${dashboardUrl}?${params.toString()}`;
 }
 
 function alertsInWindow(d: DeploymentLifecycle, alerts: Alert[]): Alert[] {
@@ -62,7 +76,7 @@ function formatDuration(startIso: string, endIso: string | null): string | null 
   return `${Math.floor(seconds / 3600)}시간 ${Math.floor((seconds % 3600) / 60)}분`;
 }
 
-export function DeploymentList({ configured, pipeline, deployments, alerts }: DeploymentListProps) {
+export function DeploymentList({ configured, pipeline, namespace, deployments, alerts }: DeploymentListProps) {
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -143,6 +157,17 @@ export function DeploymentList({ configured, pipeline, deployments, alerts }: De
                   {relative && <span>· {relative}</span>}
                   {duration && (
                     <span>· {content.buildDuration} <span className="text-slate-300">{duration}</span></span>
+                  )}
+                  {namespace && (
+                    <a
+                      href={buildGrafanaLink(d, namespace)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-sky-300 hover:text-sky-200"
+                      title={`${content.grafanaLink.label} — ${namespace} namespace, 배포 시간대`}
+                    >
+                      📊 {content.grafanaLink.label} ↗
+                    </a>
                   )}
                 </div>
 

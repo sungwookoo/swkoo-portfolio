@@ -199,6 +199,7 @@ export function PipelineSection({
           <DeploymentList
             configured={deploymentsEnvelope.configured}
             pipeline={pipeline.name}
+            namespace={pipeline.namespace}
             deployments={deploymentsEnvelope.deployments}
             alerts={relatedAlerts}
           />

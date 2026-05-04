@@ -45,6 +45,13 @@ export const deployments = {
     sync: 'Argo synced',
   },
   buildDuration: 'commit → ready',
+  grafanaLink: {
+    label: 'Grafana 메트릭',
+    dashboardUrl:
+      'https://grafana.swkoo.kr/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods',
+    preWindowMs: 5 * 60 * 1000,
+    postWindowMs: 10 * 60 * 1000,
+  },
 } as const;
 
 export const legend = {
