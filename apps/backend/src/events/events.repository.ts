@@ -35,6 +35,12 @@ export interface EventSummary {
   failureCount: number;
   lastEventAt: string | null;
   lastEventType: string | null;
+  // MTTR: average seconds from a sync_failed to the following sync_succeeded.
+  // null when no failure→success pair exists in the window.
+  mttrSeconds: number | null;
+  // Average seconds between consecutive sync_succeeded events (deploy cadence).
+  // null when fewer than 2 successes exist in the window.
+  avgIntervalSeconds: number | null;
 }
 
 @Injectable()
@@ -122,13 +128,49 @@ export class EventsRepository implements OnModuleInit, OnModuleDestroy {
       LIMIT 1
     `).get(pipelineName) as { receivedAt: string; eventType: string } | undefined;
 
+    const seq = this.db.prepare(`
+      SELECT received_at AS receivedAt, event_type AS eventType
+      FROM deployment_events
+      WHERE pipeline_name = ? AND received_at >= ?
+        AND event_type IN ('sync_succeeded', 'sync_failed')
+      ORDER BY received_at ASC
+    `).all(pipelineName, sinceIso) as { receivedAt: string; eventType: string }[];
+
+    const recoveryTimes: number[] = [];
+    let lastFailureMs: number | null = null;
+    for (const ev of seq) {
+      const t = new Date(ev.receivedAt).getTime();
+      if (ev.eventType === 'sync_failed') {
+        lastFailureMs = t;
+      } else if (ev.eventType === 'sync_succeeded' && lastFailureMs !== null) {
+        recoveryTimes.push((t - lastFailureMs) / 1000);
+        lastFailureMs = null;
+      }
+    }
+    const mttrSeconds = recoveryTimes.length > 0
+      ? Math.round(recoveryTimes.reduce((a, b) => a + b, 0) / recoveryTimes.length)
+      : null;
+
+    const successes = seq.filter((e) => e.eventType === 'sync_succeeded');
+    const intervals: number[] = [];
+    for (let i = 1; i < successes.length; i++) {
+      const a = new Date(successes[i - 1].receivedAt).getTime();
+      const b = new Date(successes[i].receivedAt).getTime();
+      intervals.push((b - a) / 1000);
+    }
+    const avgIntervalSeconds = intervals.length > 0
+      ? Math.round(intervals.reduce((a, b) => a + b, 0) / intervals.length)
+      : null;
+
     return {
       pipelineName,
       windowDays,
       deployCount: counts.deploys ?? 0,
       failureCount: counts.failures ?? 0,
       lastEventAt: last?.receivedAt ?? null,
-      lastEventType: last?.eventType ?? null
+      lastEventType: last?.eventType ?? null,
+      mttrSeconds,
+      avgIntervalSeconds
     };
   }
 }

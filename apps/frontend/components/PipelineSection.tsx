@@ -70,6 +70,14 @@ function formatRelative(iso: string | null | undefined): string | null {
   return `${Math.floor(delta / 86400)}일 전`;
 }
 
+function formatDuration(seconds: number | null): string | null {
+  if (seconds === null || seconds < 0) return null;
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  return `${Math.round(seconds / 86400)}d`;
+}
+
 function shouldDefaultOpen(
   pipeline: PipelineSummary,
   alerts: Alert[],
@@ -133,6 +141,8 @@ export function PipelineSection({
     latestDeployment?.endedAt ?? latestDeployment?.startedAt ?? pipeline.lastDeployedAt
   );
   const lastEventRelative = formatRelative(eventSummary?.lastEventAt);
+  const avgInterval = formatDuration(eventSummary?.avgIntervalSeconds ?? null);
+  const mttr = formatDuration(eventSummary?.mttrSeconds ?? null);
   const hasEventSignal =
     eventSummary !== null &&
     (eventSummary.deployCount > 0 ||
@@ -212,6 +222,12 @@ export function PipelineSection({
                   </span>
                 </>
               )}
+              {avgInterval && (
+                <>
+                  {' · ⌀ '}
+                  <span className="text-slate-300">{avgInterval}</span>
+                </>
+              )}
               {lastEventRelative && (
                 <>
                   {' · 마지막 '}
@@ -224,6 +240,18 @@ export function PipelineSection({
       </summary>
 
       <div className="space-y-6 px-5 pb-5">
+        {mttr && eventSummary && (
+          <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-2 text-xs text-slate-400">
+            <span aria-hidden>🛠</span>
+            <span>
+              최근 {eventSummary.windowDays}일 복구 평균{' '}
+              <span className="text-slate-200">{mttr}</span>
+              <span className="ml-2 text-slate-600">
+                (실패 → 다음 성공까지)
+              </span>
+            </span>
+          </div>
+        )}
         <PipelineCard
           pipeline={pipeline}
           workflowsEnvelope={workflowsEnvelope}

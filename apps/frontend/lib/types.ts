@@ -128,4 +128,6 @@ export interface EventSummary {
   failureCount: number;
   lastEventAt: string | null;
   lastEventType: string | null;
+  mttrSeconds: number | null;
+  avgIntervalSeconds: number | null;
 }
