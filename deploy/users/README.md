@@ -25,5 +25,10 @@ follows the same pattern:
 5. Add an ArgoCD Application (or ApplicationSet entry) pointing at this folder
 6. `kubectl apply` the wildcard cert secret reflection if needed (Phase 1.4)
 
-These manifests are not yet wired to ArgoCD — that's the next slice
-(Phase 1.4 in [`../../docs/deploy-vision.md`](../../docs/deploy-vision.md)).
+Wired to ArgoCD via the `swkoo-users` ApplicationSet
+([`../argocd/users-applicationset.yaml`](../argocd/users-applicationset.yaml)) —
+any directory added under `deploy/users/<login>/` is auto-discovered.
+
+For the full onboarding checklist (OCIR token + friend GitHub Actions
++ manifest registration), see
+[`../../docs/onboarding-friend.md`](../../docs/onboarding-friend.md).

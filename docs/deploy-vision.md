@@ -89,7 +89,8 @@
 | 1.2 | manifests repo 디렉토리 패턴 (`deploy/users/sample/`) | ✅ | kustomize render 정상 (7 리소스) |
 | 1.3 | Per-user ResourceQuota / LimitRange / NetworkPolicy 템플릿 | ✅ | sample 디렉토리에 포함 |
 | 1.4 | ArgoCD ApplicationSet (deploy/users/* 자동) + sample sync | ✅ | `https://sample-hello.apps.swkoo.kr` HTTP 200 |
-| 1.5 | 사용자 GitHub Actions 빌드 템플릿 (운영자 제공) | ☐ | sample repo로 push → 이미지 OCIR 도착 |
+| 1.5 | 사용자 GitHub Actions 빌드 템플릿 + onboarding 가이드 | ✅ | `docs/templates/friend-build-workflow.yml`, `docs/onboarding-friend.md` |
+| 1.5b | (별도) 친구 push 후 자동 sync trigger (deploy webhook) | ☐ | Phase 1.6 끝나고 검토 |
 | 1.6 | 친구 1명 실제 등록 + 검증 | ☐ | URL 외부 접근 + Observatory에서 모니터링 가능 |
 
 ---

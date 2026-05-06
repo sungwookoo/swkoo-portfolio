@@ -45,7 +45,10 @@ swkoo.kr/
 | **github-actions-integration.md** | GitHub Actions ↔ Backend 연동 | ✅ 구현 완료 |
 | **alerting-implementation-plan.md** | Prometheus/Alertmanager 알람 설계 | ✅ Phase 1 완료 |
 | **registry.md** | OCI Registry 설정 및 인증 | ✅ 완료 |
-| **deploy-vision.md** | `/deploy` 친구한정 PaaS 데모 정체성·Phase 1 설계 | 📐 v0 설계 (구현 전) |
+| **deploy-vision.md** | `/deploy` 친구한정 PaaS 데모 정체성·Phase 1 설계 | 📐 v0 설계 (Phase 1.4까지 구현) |
+| **onboarding-friend.md** | 친구 1명 등록 단계별 체크리스트 (admin + friend 시점) | ✅ Phase 1.5 |
+| **templates/friend-build-workflow.yml** | 친구 repo에 복사할 GitHub Actions 빌드 워크플로 | ✅ Phase 1.5 |
+| **templates/Dockerfile.node.example** | Node.js 앱용 Dockerfile 예시 | ✅ Phase 1.5 |
 | **REFACTORING_PROMPT.md** | 프로젝트 리팩토링 작업 프롬프트 | 📋 작업 지시서 |
 
 ## 문서 업데이트 규칙

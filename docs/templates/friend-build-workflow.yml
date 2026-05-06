@@ -1,0 +1,58 @@
+# Drop this file into your repo at .github/workflows/build.yml
+#
+# Required secrets (swkoo will give you the values, set them under
+# your repo's Settings → Secrets and variables → Actions):
+#   OCI_REGISTRY_HOST       e.g. nrt.ocir.io
+#   OCI_TENANCY_NAMESPACE   the tenancy/object-storage prefix
+#   OCI_USERNAME            the OCI auth username swkoo issues you
+#   OCI_AUTH_TOKEN          the matching auth token (NOT your password)
+#   OCIR_REPO_PATH          where your image lives, e.g. swkoo/users/<your-login>/<your-app>
+#
+# What this does:
+#   1. Builds your Dockerfile for linux/arm64 (swkoo's cluster is ARM64)
+#   2. Pushes two tags: <commit-sha> and `latest`
+#   3. swkoo updates the deploy manifest (or runs a sync) to pick up
+#      the new image — no further work from you.
+
+name: Build & Push to swkoo.kr
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Native ARM runner — required because the cluster is aarch64.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to OCI Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.OCI_REGISTRY_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          password: ${{ secrets.OCI_AUTH_TOKEN }}
+
+      - name: Build and push (latest + commit SHA)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.OCI_REGISTRY_HOST }}/${{ secrets.OCI_TENANCY_NAMESPACE }}/${{ secrets.OCIR_REPO_PATH }}:${{ github.sha }}
+            ${{ secrets.OCI_REGISTRY_HOST }}/${{ secrets.OCI_TENANCY_NAMESPACE }}/${{ secrets.OCIR_REPO_PATH }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "✅ Pushed ${{ secrets.OCIR_REPO_PATH }}:${{ github.sha }}"
+          echo "✅ Pushed ${{ secrets.OCIR_REPO_PATH }}:latest"
+          echo "swkoo will roll this out at https://<your-app>.apps.swkoo.kr"
