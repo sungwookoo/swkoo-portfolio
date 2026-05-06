@@ -45,6 +45,7 @@ swkoo.kr/
 | **github-actions-integration.md** | GitHub Actions ↔ Backend 연동 | ✅ 구현 완료 |
 | **alerting-implementation-plan.md** | Prometheus/Alertmanager 알람 설계 | ✅ Phase 1 완료 |
 | **registry.md** | OCI Registry 설정 및 인증 | ✅ 완료 |
+| **deploy-vision.md** | `/deploy` 친구한정 PaaS 데모 정체성·Phase 1 설계 | 📐 v0 설계 (구현 전) |
 | **REFACTORING_PROMPT.md** | 프로젝트 리팩토링 작업 프롬프트 | 📋 작업 지시서 |
 
 ## 문서 업데이트 규칙
