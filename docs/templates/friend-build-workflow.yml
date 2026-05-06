@@ -1,26 +1,32 @@
 # Drop this file into your repo at .github/workflows/build.yml
 #
-# Required secrets (swkoo will give you the values, set them under
-# your repo's Settings → Secrets and variables → Actions):
-#   OCI_REGISTRY_HOST       e.g. nrt.ocir.io
-#   OCI_TENANCY_NAMESPACE   the tenancy/object-storage prefix
-#   OCI_USERNAME            the OCI auth username swkoo issues you
-#   OCI_AUTH_TOKEN          the matching auth token (NOT your password)
-#   OCIR_REPO_PATH          where your image lives, e.g. swkoo/users/<your-login>/<your-app>
-#
 # What this does:
 #   1. Builds your Dockerfile for linux/arm64 (swkoo's cluster is ARM64)
-#   2. Pushes two tags: <commit-sha> and `latest`
-#   3. swkoo updates the deploy manifest (or runs a sync) to pick up
-#      the new image — no further work from you.
+#   2. Pushes two tags to ghcr.io/<your-login>/<your-repo>:
+#        :<commit-sha>  (immutable)
+#        :latest         (overwritten each push — what swkoo's cluster pulls)
+#
+# What you set up:
+#   * Nothing in this repo's secrets — GitHub Actions ships with a built-in
+#     GITHUB_TOKEN that has push access to your own GHCR.
+#   * After the first push, go to your GitHub profile → Packages →
+#     <this repo's package> → Package settings, and either:
+#       (a) Make it Public — easiest, no pull token needed downstream
+#       (b) Keep Private — generate a Personal Access Token with
+#           read:packages scope and hand it to swkoo so the cluster
+#           can pull (one-time)
 
-name: Build & Push to swkoo.kr
+name: Build & Push to GHCR
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write   # required to push to ghcr.io/<owner>/...
 
 jobs:
   build:
@@ -32,12 +38,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to OCI Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.OCI_REGISTRY_HOST }}
-          username: ${{ secrets.OCI_USERNAME }}
-          password: ${{ secrets.OCI_AUTH_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push (latest + commit SHA)
         uses: docker/build-push-action@v5
@@ -46,13 +52,13 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ${{ secrets.OCI_REGISTRY_HOST }}/${{ secrets.OCI_TENANCY_NAMESPACE }}/${{ secrets.OCIR_REPO_PATH }}:${{ github.sha }}
-            ${{ secrets.OCI_REGISTRY_HOST }}/${{ secrets.OCI_TENANCY_NAMESPACE }}/${{ secrets.OCIR_REPO_PATH }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Summary
         run: |
-          echo "✅ Pushed ${{ secrets.OCIR_REPO_PATH }}:${{ github.sha }}"
-          echo "✅ Pushed ${{ secrets.OCIR_REPO_PATH }}:latest"
+          echo "✅ Pushed ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}"
+          echo "✅ Pushed ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest"
           echo "swkoo will roll this out at https://<your-app>.apps.swkoo.kr"

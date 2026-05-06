@@ -8,13 +8,29 @@ friend; the "friend" steps the friend does once on their side.
 
 ---
 
+## Registry split (Phase 1 decision)
+
+- swkoo's own apps stay on **OCIR** (`nrt.ocir.io/<tenancy>/swkoo/...`)
+  — current setup, unchanged.
+- The friend pushes to their own **GHCR** (`ghcr.io/<friend-login>/<repo>`).
+  Each friend uses their own GitHub account's free quota; swkoo never
+  has to manage OCI users or policies for friends.
+
+Why GHCR for friends:
+- Zero secrets for the friend (GitHub Actions auto-injects GITHUB_TOKEN
+  with packages:write scope on their own repo).
+- Public images are unlimited storage + bandwidth on the free plan.
+- Private quotas, if needed, count against the friend's account, not
+  swkoo's.
+
+---
+
 ## What the friend gets
 
 - Their own Kubernetes namespace (`user-<github-login>`) with quotas
 - An HTTPS URL (`<app>.apps.swkoo.kr`) auto-issued by Let's Encrypt
-- An OCI Container Registry slot to push images into
-- A copy-paste GitHub Actions workflow that builds + pushes on every
-  commit to `main`
+- A copy-paste GitHub Actions workflow that builds + pushes their
+  image on every commit to `main`
 
 What they don't get (Phase 1):
 - Self-service signup (admin onboards manually)
@@ -26,60 +42,31 @@ What they don't get (Phase 1):
 
 ---
 
-## Step 1 — swkoo: issue OCIR credentials
-
-In the OCI console:
-
-1. Identity & Security → Domains → Default → Users → **Create user**
-   - Name: `friend-<github-login>`
-   - Description: "PaaS friend hosting on swkoo.kr"
-2. Under that user → **Auth Tokens** → **Generate Token**
-   - Description: `swkoo PaaS push token`
-   - Copy the token — it's shown only once
-3. Identity → Groups → Create group `swkoo-friends-write` (if not yet)
-   and assign the new user to it.
-4. Identity → Policies → Add a policy that allows
-   `swkoo-friends-write` to `manage repos` only in the friend's
-   subpath:
-
-   ```
-   Allow group swkoo-friends-write to manage repos in tenancy
-     where target.repo.name=/^swkoo\/users\/<github-login>\/.*$/
-   ```
-
-   This caps the friend's write to `swkoo/users/<their-login>/*` only.
-5. Hand the friend these five values (use a 1Password share or
-   similar — don't paste in chat):
-   - `OCI_REGISTRY_HOST` — e.g. `nrt.ocir.io`
-   - `OCI_TENANCY_NAMESPACE` — e.g. `nrznn4yiltsz`
-   - `OCI_USERNAME` — e.g. `<tenancy>/oracleidentitycloudservice/friend-<login>@example.com`
-   - `OCI_AUTH_TOKEN` — the token from step 2
-   - `OCIR_REPO_PATH` — `swkoo/users/<their-login>/<their-app>`
-
----
-
-## Step 2 — friend: drop the workflow into their repo
+## Step 1 — friend: drop the workflow into their repo
 
 1. Copy [`docs/templates/friend-build-workflow.yml`](./templates/friend-build-workflow.yml)
-   into their repo at `.github/workflows/build.yml`.
+   into their repo at `.github/workflows/build.yml`. **No secrets to set**
+   — `GITHUB_TOKEN` is provided automatically.
 2. Copy [`docs/templates/Dockerfile.node.example`](./templates/Dockerfile.node.example)
    to their repo as `Dockerfile`. Adjust the four marked spots
-   (build step, copied dirs, port, start command) for their app.
-   Other languages: any standard Linux/ARM64-compatible image works
-   (Python, Go, Rust, …).
-3. In GitHub → repo Settings → Secrets and variables → **Actions** →
-   add the five secrets from Step 1.
-4. `git push origin main`. Watch the Actions tab — first build
-   typically 2-4 minutes.
-5. Confirm in OCIR: image appears at the path you were given.
+   (build step, copied dirs, port, start command). Other languages
+   work too — anything that builds a Linux/ARM64 image.
+3. `git push origin main`. First build typically 2-4 minutes.
+4. After the first build, go to **GitHub profile → Packages →
+   `<repo>`** and decide visibility:
+   - **Public** (recommended for simplicity) — anyone can pull, no
+     pull token needed downstream.
+   - **Private** — friend generates a Personal Access Token with
+     `read:packages` scope and hands it to swkoo for the cluster
+     `imagePullSecret`.
 
 ---
 
-## Step 3 — swkoo: register the friend's manifests
+## Step 2 — swkoo: register the friend's manifests
 
 1. Copy `deploy/users/sample/` → `deploy/users/<github-login>/`.
-2. Replace every occurrence of `sample` with `<github-login>` in
-   the new directory:
+2. Replace every occurrence of `sample` with `<github-login>` in the
+   new directory:
    - namespace: `user-<github-login>`
    - app folder: rename `hello/` to the friend's app name
    - Ingress host: pick a subdomain under `*.apps.swkoo.kr`,
@@ -87,25 +74,33 @@ In the OCI console:
 3. Update the image reference in `deployment.yaml`:
 
    ```yaml
-   image: nrt.ocir.io/<tenancy>/swkoo/users/<friend-login>/<app>:latest
+   image: ghcr.io/<friend-login>/<repo-name>:latest
    imagePullPolicy: Always
    ```
 
-   (The `:latest` tag plus `Always` means the next pod restart
-   pulls fresh.)
-4. The friend's image is in **a private OCIR repo**. Add an
-   `imagePullSecrets` to the Deployment, and create the secret in
-   the friend's namespace:
+   (`:latest` plus `Always` means the next pod restart pulls fresh.)
+4. **Only if the friend's GHCR package is private**, create the pull
+   secret:
 
    ```bash
-   kubectl create secret docker-registry ocir-credentials \
+   kubectl create secret docker-registry ghcr-pull \
      -n user-<friend-login> \
-     --docker-server=nrt.ocir.io \
-     --docker-username=<their OCI_USERNAME> \
-     --docker-password=<their OCI_AUTH_TOKEN> \
-     --docker-email=<friend-email>
+     --docker-server=ghcr.io \
+     --docker-username=<friend-login> \
+     --docker-password=<friend-PAT-with-read:packages>
    ```
 
+   And reference it in `deployment.yaml`:
+
+   ```yaml
+   spec:
+     template:
+       spec:
+         imagePullSecrets:
+           - name: ghcr-pull
+   ```
+
+   Public packages need no pull secret at all.
 5. Adjust resources / Ingress host, double-check NetworkPolicy
    still fits the app's needs.
 6. `git add deploy/users/<github-login>/ && git commit && git push`.
@@ -114,7 +109,7 @@ In the OCI console:
 
 ---
 
-## Step 4 — first sync + verification
+## Step 3 — first sync + verification
 
 ```bash
 # On the cluster (swkoo only):
@@ -131,12 +126,12 @@ show `swkoo-user-<github-login>` as a new pipeline.
 
 ---
 
-## Step 5 — subsequent friend pushes (until Phase 1.5b lands)
+## Step 4 — subsequent friend pushes (until Phase 1.5b lands)
 
 After the first onboarding, every subsequent friend push:
 
-1. Friend pushes — image rebuilds and `:latest` is overwritten in
-   OCIR.
+1. Friend pushes — GitHub Actions rebuilds and overwrites
+   `ghcr.io/<friend>/<repo>:latest`.
 2. swkoo runs **one** of:
 
    ```bash
@@ -161,8 +156,7 @@ deploy-trigger webhook.
 2. `swkoo-users` ApplicationSet auto-removes the Application
    (`prune: true` in the template).
 3. ArgoCD deletes everything in `user-<github-login>` namespace.
-4. In OCI: revoke the friend's auth token, optionally delete the
-   user and their OCIR repos.
-5. Optional: delete the wildcard-matching A record entry if it was
-   ever a per-friend record (the `*.apps.swkoo.kr` wildcard already
-   covers everything, so usually nothing to do).
+4. Friend retains full control of their GHCR images — they can
+   keep, archive, or delete on their side.
+5. The wildcard `*.apps.swkoo.kr` covers everything, so no DNS
+   cleanup needed.

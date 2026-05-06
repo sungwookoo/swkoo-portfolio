@@ -75,8 +75,9 @@
 핵심 결정 (Phase 1 단계에서 단순함 우선):
 - **wildcard TLS**: cert-manager DNS-01 challenge with `*.apps.swkoo.kr` (별도 와일드카드 인증서)
 - **namespace 네이밍**: `user-<github-login>` (1 사용자 = 1 namespace, 그 안에 여러 앱)
-- **이미지 빌드**: 사용자 repo의 GitHub Actions가 OCIR로 push (운영자가 OCIR 별도 사용자 token 발급해 줄 수도)
-- **ArgoCD App per user-app**: ApplicationSet으로 자동 생성 (Phase 1.5 이후)
+- **registry 분리**: swkoo 본인 image는 OCIR(`nrt.ocir.io/...`) 그대로, **친구 image는 친구의 GHCR(`ghcr.io/<friend>/<app>`)**. 친구는 GitHub 안에서 끝나고, swkoo OCI 한도(20GB Object Storage)는 친구가 늘어도 영향 없음.
+- **이미지 빌드**: 친구 repo의 GitHub Actions가 자기 GHCR로 push (built-in `GITHUB_TOKEN`, 친구가 추가 secret 등록 불필요)
+- **ArgoCD App per user-app**: ApplicationSet으로 자동 생성 (`deploy/users/*` 자동 발견)
 - **manifests repo 위치**: 일단 `swkoo-portfolio/deploy/users/<friend>/<app>/` 하위에 두고, Phase 2 이후 별도 repo로 분리 검토
 
 ---
