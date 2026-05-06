@@ -26,9 +26,9 @@ data:
 
   # ── Triggers: when ArgoCD should fire a notification ─────────────────
   trigger.on-sync-succeeded: |
-    - description: Application syncing has succeeded
+    - description: Application syncing has succeeded AND pods reached Healthy
       send: [swkoo-sync-succeeded]
-      when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded']
+      when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
 
   trigger.on-sync-failed: |
     - description: Application syncing has failed
