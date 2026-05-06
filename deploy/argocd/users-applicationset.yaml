@@ -1,0 +1,41 @@
+# Fans out deploy/users/<github-login>/ into one Application per directory.
+# Onboarding a new friend = copy deploy/users/sample/ -> deploy/users/<login>/,
+# rename "sample" to <login> in every file, push to main. ApplicationSet
+# notices and creates swkoo-user-<login> automatically.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: swkoo-users
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+        revision: main
+        directories:
+          - path: deploy/users/*
+  template:
+    metadata:
+      name: 'swkoo-user-{{path.basename}}'
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-succeeded.swkoo-backend: ""
+        notifications.argoproj.io/subscribe.on-sync-failed.swkoo-backend: ""
+        notifications.argoproj.io/subscribe.on-health-degraded.swkoo-backend: ""
+        notifications.argoproj.io/subscribe.on-sync-succeeded.discord: ""
+        notifications.argoproj.io/subscribe.on-sync-failed.discord: ""
+        notifications.argoproj.io/subscribe.on-health-degraded.discord: ""
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'user-{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
