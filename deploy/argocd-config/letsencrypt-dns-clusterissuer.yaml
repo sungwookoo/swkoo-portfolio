@@ -1,0 +1,22 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod-dns
+spec:
+  acme:
+    email: sungwookoo.dev@gmail.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-dns-account-key
+    solvers:
+      - dns01:
+          # Cloudflare DNS-01 challenge.
+          # The api-token secret is created out-of-band in the cert-manager
+          # namespace (kubectl, not git) so the token never lives in this repo.
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        selector:
+          dnsZones:
+            - swkoo.kr

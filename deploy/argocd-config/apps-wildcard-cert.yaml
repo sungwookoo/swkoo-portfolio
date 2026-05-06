@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: apps-wildcard-tls
+  namespace: cert-manager
+spec:
+  secretName: apps-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod-dns
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.apps.swkoo.kr"
+    - "apps.swkoo.kr"
+  # 90-day cert, renew at 30 days remaining (cert-manager default).
