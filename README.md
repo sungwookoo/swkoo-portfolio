@@ -57,16 +57,17 @@ VISION §2의 핵심(cross-tool 타임라인 + 알람 overlay)에 가장 직접 
 | 활성 알람 overlay를 Observatory에 표시 (Alertmanager API) | ✅ | ② 경계 잇기 — **핵심** |
 | 배포 1건 단위로 `commit → run → image → sync → pod` 연결 뷰 | ✅ | ② 경계 잇기 — **핵심** |
 
-### Phase 3 – 이벤트 스토어 & 히스토리 🎯 **현재 우선순위**
+### Phase 3 – 이벤트 스토어 & 히스토리 ✅ 완료
 
 "실시간"은 과잉 주장이므로 **near-real-time**으로 정직하게 표기. 진짜 WebSocket 스트리밍은 non-goal.
 
 | 항목 | 상태 | 심사 결과 |
 |---|---|---|
-| Argo CD Webhook → 경량 이벤트 스토어(SQLite 수준) | ☐ | 관측 인프라 — OK |
-| GitHub Actions Webhook 수신 | ☐ | 관측 인프라 — OK |
-| 배포 이벤트 히스토리(최근 N회, MTTR 추이) | ☐ | ② 경계 잇기 — **핵심** |
-| Grafana 패널 **임베드/링크** | ☐ | ① 재구현 금지, 링크만 |
+| Argo CD Webhook → 경량 이벤트 스토어(SQLite 수준) | ✅ | 관측 인프라 — argocd-notifications + better-sqlite3 |
+| GitHub Actions Webhook 수신 | ✅ | 관측 인프라 — workflow_run 이벤트 HMAC 검증 |
+| 배포 이벤트 히스토리(최근 N회, MTTR 추이) | ✅ | ② 경계 잇기 — **핵심** — `/api/pipelines/:name/event-summary` |
+| Grafana 패널 **임베드/링크** | ✅ | ① 재구현 금지, 링크만 — DeploymentList에서 시간 윈도우 deep link |
+| (보너스) ArgoCD 이벤트를 Discord에도 fan-out | ✅ | 인프라 측 — argocd-notifications service 추가 |
 
 ### Non-goals (의도적으로 안 만듦)
 
