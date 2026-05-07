@@ -64,22 +64,25 @@ What they don't get (Phase 1):
 
 ## Step 2 — swkoo: register the friend's manifests
 
-1. Copy `deploy/users/sample/` → `deploy/users/<github-login>/`.
+1. Copy `docs/templates/user-manifests/` → `deploy/users/<github-login>/`.
 2. Replace every occurrence of `sample` with `<github-login>` in the
-   new directory:
-   - namespace: `user-<github-login>`
-   - app folder: rename `hello/` to the friend's app name
-   - Ingress host: pick a subdomain under `*.apps.swkoo.kr`,
-     e.g. `<friend-login>-<app>.apps.swkoo.kr`
-3. Update the image reference in `deployment.yaml`:
+   new directory (covers namespace name, labels, ResourceQuota name, etc.).
+3. Replace every occurrence of `hello` with `<friend-app-name>`,
+   including renaming the `hello/` folder.
+4. In `<app>/deployment.yaml`, set the image and (if needed) port/uid:
 
    ```yaml
+   # REPLACE: ghcr.io/CHANGEME/CHANGEME:latest
    image: ghcr.io/<friend-login>/<repo-name>:latest
-   imagePullPolicy: Always
    ```
 
-   (`:latest` plus `Always` means the next pod restart pulls fresh.)
-4. **Only if the friend's GHCR package is private**, create the pull
+   Defaults assume Node/Next.js: `containerPort: 3000`, `runAsUser: 1000`,
+   writable root filesystem. If their stack differs, adjust those.
+   `imagePullPolicy: Always` is set so each pod restart pulls the
+   fresh `:latest`.
+5. In `<app>/ingress.yaml`, pick the host (×2 occurrences) — typically
+   `<friend-login>-<app>.apps.swkoo.kr`.
+6. **Only if the friend's GHCR package is private**, create the pull
    secret:
 
    ```bash
@@ -101,11 +104,12 @@ What they don't get (Phase 1):
    ```
 
    Public packages need no pull secret at all.
-5. Adjust resources / Ingress host, double-check NetworkPolicy
-   still fits the app's needs.
-6. `git add deploy/users/<github-login>/ && git commit && git push`.
+7. Double-check resources / NetworkPolicy still fit the app's needs.
+8. `git add deploy/users/<github-login>/ && git commit && git push`.
    The `swkoo-users` ApplicationSet picks the new directory up
-   automatically and creates `swkoo-user-<github-login>`.
+   automatically and creates `swkoo-user-<github-login>` (may take
+   up to ~3 min for git polling — annotate the ApplicationSet with
+   `argocd.argoproj.io/refresh=hard` to force immediate pickup).
 
 ---
 

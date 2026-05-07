@@ -16,19 +16,15 @@ follows the same pattern:
     └── ingress.yaml        # <app>-<...>.apps.swkoo.kr
 ```
 
-`sample/` is the canonical reference. To onboard a friend:
+The template lives at
+[`../../docs/templates/user-manifests/`](../../docs/templates/user-manifests/) —
+copy it here, run the substitutions described in that template's README,
+commit, push. The `swkoo-users` ApplicationSet auto-discovers the new
+directory.
 
-1. Copy `sample/` → `<friend-login>/`
-2. Rename `user-sample` → `user-<friend-login>` in every file
-3. Replace the app name `hello` and image with their app
-4. Pick subdomain(s) under `apps.swkoo.kr` and update Ingress
-5. Add an ArgoCD Application (or ApplicationSet entry) pointing at this folder
-6. `kubectl apply` the wildcard cert secret reflection if needed (Phase 1.4)
-
-Wired to ArgoCD via the `swkoo-users` ApplicationSet
-([`../argocd/users-applicationset.yaml`](../argocd/users-applicationset.yaml)) —
-any directory added under `deploy/users/<login>/` is auto-discovered.
-
-For the full onboarding checklist (OCIR token + friend GitHub Actions
-+ manifest registration), see
+For the full onboarding checklist (friend GitHub Actions + manifest
+registration), see
 [`../../docs/onboarding-friend.md`](../../docs/onboarding-friend.md).
+
+Live reference: [`sungwookoo/`](sungwookoo/) is a real Next.js deployment
+serving at `sungwookoo-nextjs-sample.apps.swkoo.kr`.
