@@ -1,23 +1,43 @@
-# Fans out deploy/users/<github-login>/ into one Application per directory.
-# Onboarding a new friend = copy deploy/users/sample/ -> deploy/users/<login>/,
-# rename "sample" to <login> in every file, push to main. ApplicationSet
+# Fans out deploy/users/<github-login>/metadata.yaml into one Application
+# per file. Onboarding a new friend = copy the template under
+# `docs/templates/user-manifests/` to `deploy/users/<login>/`, fill in the
+# substitutions (incl. metadata.yaml), push to main. ApplicationSet
 # notices and creates swkoo-user-<login> automatically.
+#
+# Image Updater annotations on the template wire each Application up for
+# auto-redeploy when the friend's GHCR image gets a new digest. See
+# https://argocd-image-updater.readthedocs.io/.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: swkoo-users
   namespace: argocd
 spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  # Image Updater patches /spec/source/kustomize/images on each new digest.
+  # Without this, ApplicationSet would clobber that field on every refresh.
+  ignoreApplicationDifferences:
+    - jsonPointers:
+        - /spec/source/kustomize/images
   generators:
     - git:
         repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
         revision: main
-        directories:
-          - path: deploy/users/*
+        files:
+          - path: deploy/users/*/metadata.yaml
   template:
     metadata:
-      name: 'swkoo-user-{{path.basename}}'
+      name: 'swkoo-user-{{ .login }}'
       annotations:
+        # Image Updater: track one image per friend, write back into the
+        # Application spec (no git commit). Update strategy is per-friend
+        # via metadata.yaml.
+        argocd-image-updater.argoproj.io/image-list: 'app={{ .image.repo }}'
+        argocd-image-updater.argoproj.io/app.update-strategy: '{{ .image.updateStrategy }}'
+        argocd-image-updater.argoproj.io/write-back-method: argocd
+        # Notifications (kept verbatim from the prior version).
         notifications.argoproj.io/subscribe.on-sync-succeeded.swkoo-backend: ""
         notifications.argoproj.io/subscribe.on-sync-failed.swkoo-backend: ""
         notifications.argoproj.io/subscribe.on-health-degraded.swkoo-backend: ""
@@ -29,10 +49,10 @@ spec:
       source:
         repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
         targetRevision: main
-        path: '{{path}}'
+        path: 'deploy/users/{{ .login }}'
       destination:
         server: https://kubernetes.default.svc
-        namespace: 'user-{{path.basename}}'
+        namespace: 'user-{{ .login }}'
       syncPolicy:
         automated:
           prune: true

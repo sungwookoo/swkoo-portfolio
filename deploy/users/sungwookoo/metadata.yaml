@@ -1,0 +1,11 @@
+# Surfaces friend-specific config to the ApplicationSet template — primarily
+# the image(s) ArgoCD Image Updater should track for auto-redeploy.
+# Phase 1 supports a single image per friend; multi-container apps wait
+# for an actual case (YAGNI).
+login: sungwookoo
+image:
+  repo: ghcr.io/sungwookoo/nextjs-sample
+  # update-strategy: digest | latest | name | semver
+  # `digest` keeps the manifest tag (`:latest`) but pins the actual image
+  # digest in the Application spec, so each new push auto-redeploys.
+  updateStrategy: digest
