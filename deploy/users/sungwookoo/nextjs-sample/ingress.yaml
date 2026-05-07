@@ -1,0 +1,27 @@
+# Per-app cert via DNS-01 cluster-issuer. Once we wire Traefik's default
+# certificate to the wildcard secret in Phase 1.4, we can drop the
+# cert-manager annotation here and rely on the wildcard cert directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nextjs-sample
+  namespace: user-sungwookoo
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - sungwookoo-nextjs-sample.apps.swkoo.kr
+      secretName: nextjs-sample-tls
+  rules:
+    - host: sungwookoo-nextjs-sample.apps.swkoo.kr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nextjs-sample
+                port:
+                  number: 80

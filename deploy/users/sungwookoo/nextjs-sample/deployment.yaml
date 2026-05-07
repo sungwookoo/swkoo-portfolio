@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-sample
+  namespace: user-sungwookoo
+  labels:
+    app: nextjs-sample
+    swkoo.kr/user: sungwookoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextjs-sample
+  template:
+    metadata:
+      labels:
+        app: nextjs-sample
+        swkoo.kr/user: sungwookoo
+    spec:
+      containers:
+        - name: nextjs-sample
+          image: ghcr.io/sungwookoo/nextjs-sample:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          # Resource requests/limits are filled in by the namespace LimitRange.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
