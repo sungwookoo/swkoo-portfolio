@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+# Pin to a stable Image Updater release. Bumping is a one-line change here;
+# see https://github.com/argoproj-labs/argocd-image-updater/releases.
+resources:
+  - https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/v0.15.2/manifests/install.yaml
+patches:
+  - path: registries-patch.yaml
+    target:
+      kind: ConfigMap
+      name: argocd-image-updater-config
