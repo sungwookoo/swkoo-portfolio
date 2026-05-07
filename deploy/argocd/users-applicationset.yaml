@@ -36,6 +36,9 @@ spec:
         # via metadata.yaml.
         argocd-image-updater.argoproj.io/image-list: 'app={{ .image.repo }}'
         argocd-image-updater.argoproj.io/app.update-strategy: '{{ .image.updateStrategy }}'
+        # `digest` strategy needs to know which tag's digest to track.
+        # Phase 1 convention: friends always tag `:latest`.
+        argocd-image-updater.argoproj.io/app.allow-tags: 'regexp:^latest$'
         argocd-image-updater.argoproj.io/write-back-method: argocd
         # Notifications (kept verbatim from the prior version).
         notifications.argoproj.io/subscribe.on-sync-succeeded.swkoo-backend: ""
