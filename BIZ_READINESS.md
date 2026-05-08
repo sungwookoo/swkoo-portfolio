@@ -1,0 +1,153 @@
+# BIZ_READINESS
+
+> 이 문서는 swkoo.kr 프로젝트가 **유료 모델로 전환**할 때 진실이 되어야 하는 것들을 추적한다. friend-only 베타 가정의 [`docs/deploy-vision.md`](./docs/deploy-vision.md) 와 짝을 이룬다. §0 활성화 신호가 발생하면 본격 갱신·실행한다.
+
+이 문서는 [VISION.md](./VISION.md)와 다르다. VISION은 *지금 만드는 것의 정체성*이고, 이 문서는 *돈을 받기 시작하면 진실이 되는 것*이다. 두 문서가 충돌하는 항목은 의도된 — VISION의 non-goal 중 일부가 사업화 시점에 깨져야 함을 명시적으로 추적하는 게 이 문서의 역할.
+
+---
+
+## 0. 활성화 신호
+
+이 중 하나가 발생하면 §1·§2를 본격 점검·실행 시점:
+
+- 친구 아닌 외부 사용자의 등록 시도(allowlist 거절 로그)가 한 달 5건 이상
+- 베타 사용 친구가 "내 친구도 써도 되냐" 묻기 시작
+- 사용 중인 친구가 "유료라도 쓰겠다"고 말함
+- 1인 운영 부담이 가시화 (Observatory 알람 응답 시간 30분 초과 빈발)
+
+그 전엔 친구용 Phase 2 v0 운영하며 신호 수집.
+
+---
+
+## 1. P0 — 사업 진입 전 반드시 해결
+
+### 1.1 단일 노드 = SLA 불가
+
+OCI Always Free A1은 단일 노드 천장 (4 OCPU/24GB). 노드 down = 모든 고객 down. 실효 가용성 ~95% — 유료 고객 기대치 99% 미만.
+
+**해결 경로 (택1)**:
+- Free 떠남: OCI Paid 또는 관리형 k8s (~$50-200/월 시작)
+- "Asia-only beta · best-effort SLA" 명시 후 가격 낮추기
+- Hard pivot: Fly.io / Railway 같은 외부 플랫폼 위에 메타 레이어로 (자체호스팅 정체성 포기)
+
+**현재 deploy-vision §3 명문**: "SLA 보장 ❌". 이 문장을 깰 자원·운영 계획 없이 사업 시작 ❌.
+
+### 1.2 멀티테넌트 격리 강도
+
+현재 안전망: namespace + NetworkPolicy + ResourceQuota + LimitRange. 빠진 것:
+- 이미지 스캔 (Trivy 등) — 친구가 악성 이미지 push 시 그대로 실행
+- Pod Security Admission (PSA) `restricted` profile enforce 없음
+- CNI 단일 평면 — 다른 tenant 패킷 가시성
+
+**해결 (P0 블로커는 아니지만 강력 권장)**:
+- Trivy admission webhook (HIGH 이상 차단)
+- PSA `restricted` namespace label 강제
+- 진짜 강격리 필요 시 vCluster 또는 Kamaji (전용 control plane per tenant)
+
+**현재 Phase에서 할 일**: 사용자 코드 책임 명시 — T&C에 "사용자 작성 코드의 보안·법적 책임은 사용자에게 있다" 조항 필요.
+
+### 1.3 매니페스트 repo 단일성
+
+현재 `swkoo-portfolio/deploy/users/*` 에 모든 친구 매니페스트. 사업화 시 문제:
+- 고객 A의 git diff에서 고객 B 매니페스트 노출 가능
+- repo public이면 모든 metadata.yaml 외부 검색됨
+- 한 commit 사고가 모든 tenant 영향
+
+**Phase 2에서 즉시 할 일**:
+- `swkoo-portfolio` repo 공개 여부 확인 → public이면 **private 전환 검토**
+- 코드에서 `getUserManifestPath(login)` 같은 함수로 경로 추상화 한 겹 — 차후 per-tenant repo 분리 시 한 곳만 수정
+
+**사업화 시 본격 해결**: per-tenant 매니페스트 repo, 또는 DB-backed 설정 + ApplicationSet plugin generator.
+
+---
+
+## 2. P1 — 한 방향 결정 회피 (Phase 2 빌드 시 적용)
+
+이 항목들은 Phase 2 빌드 중 **약간의 추가 설계만으로** 사업화 시 갈아엎을 일을 줄인다.
+
+### 2.1 백엔드 권한 비대화
+
+Phase 2 백엔드가 갖게 될 권한:
+- swkoo-portfolio 쓰기 (manifest commit)
+- 사용자 repo 쓰기 (Dockerfile/workflow commit)
+- k8s API (Secret 생성)
+
+한 군데 뚫리면 모든 고객 GitHub repo + 클러스터 전체 노출.
+
+**Phase 2 적용 사항**:
+- ✅ **GitHub App 사용** (PAT 아님) — installation token 자동 rotation, repo-scoped, 비용 동일
+- ✅ **k8s namespace-scoped Role** — 백엔드 SA는 secrets 관리 전용, 다른 권한 없음
+- ✅ **백엔드 commit author = `swkoo.kr deploy bot <bot@swkoo.kr>`** — 사용자 본인 commit과 분리, audit 추적
+
+### 2.2 Image Updater + ApplicationSet race
+
+현재 `ignoreApplicationDifferences`로 봉합. 사업 시 디버깅 헬.
+
+**전환 경로 (Phase 3쯤)**: git write-back으로 — Image Updater가 매니페스트 직접 commit, 모든 배포 git history. SSH key/PAT 추가 필요.
+
+**Phase 2에서 미리**: `metadata.yaml`에 `updateStrategy` 외 `writeBackMethod` 필드 자리 만들어 두기 — 전환 시 ApplicationSet 템플릿만 갈아끼우면 끝.
+
+### 2.3 Audit log 부재
+
+누가·언제·뭐 배포/삭제했는지 집중 검색 불가 (git log + ArgoCD 이벤트 분산).
+
+**Phase 2에서 적용**: 기존 SQLite 이벤트 스토어에 사용자 액션 추가:
+```
+actor=<github_login> action=DEPLOY|DELETE|ACCESS_REQUEST repo=<x> at=<ts>
+```
+한 줄이면 끝. 차후 영업·법무 검토에 그대로 쓰임.
+
+### 2.4 브랜딩 결합
+
+"swkoo.kr"가 곳곳에 hardcoded — VISION.md, README, manifest 라벨, 도메인. 사업체명 결정 시 광범위 치환 필요.
+
+**Phase 2에서**: `BRAND_NAME` / `BRAND_DOMAIN` 환경변수로 빼고 페이지 footer/title 등에서 변수 참조. 단, 인프라 도메인(swkoo.kr 자체)은 그대로 — 갈아끼우는 비용 큼.
+
+---
+
+## 3. 이미 사업화 정렬된 부분 (재작업 불필요)
+
+- **Pure GitOps** — audit·rollback이 git log로 자연스럽고, 매니페스트 외 상태 거의 없음
+- **모노레포 경계** (`apps/backend`, `apps/frontend`, `deploy/`) — 분리 시점에 깔끔히 떼어낼 수 있음
+- **Observability 풀세트** — Prometheus + Alertmanager + Grafana + 이벤트 스토어. 고객 SLA 리포팅 day 1 가능
+- **GHCR 친구 자기 계정** — image storage 비용 swkoo가 책임 안 짐, 좋은 모델
+- **Image Updater pull-based** — 친구 빌드가 swkoo 인프라 쓰기 권한 안 가짐
+- **Allowlist를 deploy 단계 차단** — 인증/티어 분리, SaaS 표준 패턴
+
+---
+
+## 4. Phase 2 빌드 체크리스트 (이 문서의 약속)
+
+Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
+
+- [ ] **GitHub App** (OAuth App 아님)
+- [ ] **사용자 record DB**: OAuth 통과한 모든 사용자 기록 (allowlist 통과 전부터). waitlist/티어 자료
+- [ ] **백엔드 git author** 명시 분리
+- [ ] **manifest 경로 함수 추상화** (`getUserManifestPath(login)`)
+- [ ] **사용자 액션 이벤트 로그**
+- [ ] **에러 응답 `reason` 코드** (`BETA_ALLOWLIST`, `STACK_UNSUPPORTED`, `QUOTA_EXCEEDED` 등)
+- [ ] **`BRAND_NAME` 환경변수** (페이지 표시용)
+- [ ] **T&C / Privacy Policy 페이지 자리** — 빈 페이지라도 OAuth 동의 직후 노출
+- [ ] **이미지 스캔 자리 확보**: `imageScanResult` 필드를 metadata.yaml에 미리 두고 webhook 구멍만 비워둠
+- [ ] **`writeBackMethod` 필드 자리** (현재 `argocd`, 차후 `git`)
+
+---
+
+## 5. 사업 전환 시 큰 결정 (지금 결정 안 해도 됨)
+
+| 결정 | 영향 | 미루는 비용 |
+|---|---|---|
+| 매니페스트 repo per-tenant 분리 | 코드 변경 다수, 마이그레이션 | 단일 repo 가정 코드 줄어들수록 분리 비용 작음 (§2 패턴 따르면 영향 최소화) |
+| 다중 노드 / 관리형 k8s | 인프라 비용 발생 | 결정 늦춰도 코드 변경 거의 없음 |
+| 결제 (Stripe 등) | 모듈 통째 추가 | 0 — 완전 별개 |
+| 다중 region | 클러스터 패턴 큰 변경 | 매우 큼, 일찍 결정해야 함 |
+| 회사 entity 설립 | 법률·세무·계좌 | 결정 시점에 30일 |
+| K-PIPA / GDPR 컴플라이언스 | 데이터 처리 절차 변경 | 외국인 고객 받기 시작하면 시급 |
+
+---
+
+## 변경 이력
+
+| 날짜 | 작업 |
+|------|------|
+| 2026-05-08 | 초안 작성 — Phase 2 빌드 직전, 사업전환 고려사항 외부 분리 |
