@@ -37,8 +37,6 @@ What they don't get (Phase 1):
 - Stateful storage beyond a 1Gi PVC (no PostgreSQL/MySQL hosting)
 - A way to see their own logs through swkoo (use `kubectl logs`
   manually for now)
-- Auto-deploy on push (admin syncs once after each push — Phase 1.5b
-  will automate this)
 
 ---
 
@@ -130,27 +128,26 @@ show `swkoo-user-<github-login>` as a new pipeline.
 
 ---
 
-## Step 4 — subsequent friend pushes (until Phase 1.5b lands)
+## Step 4 — subsequent friend pushes (automatic)
 
-After the first onboarding, every subsequent friend push:
+After the first onboarding, every subsequent friend push redeploys
+itself:
 
 1. Friend pushes — GitHub Actions rebuilds and overwrites
    `ghcr.io/<friend>/<repo>:latest`.
-2. swkoo runs **one** of:
+2. ArgoCD Image Updater polls GHCR every 2 min, detects the new
+   digest for `:latest`, and patches the Application spec
+   (`spec.source.kustomize.images`) with the digest-pinned image.
+3. ArgoCD detects the spec change, syncs, rolls a new Pod.
 
-   ```bash
-   # Pod restart pulls the fresh :latest
-   kubectl rollout restart deployment/<app> -n user-<friend-login>
-   ```
+Total time from `git push` to live: typically 4-7 min (build dominates).
+No swkoo action needed.
 
-   or
-
-   ```bash
-   argocd app sync swkoo-user-<friend-login>
-   ```
-
-This single manual step disappears once Phase 1.5b adds an automated
-deploy-trigger webhook.
+If a deploy seems stuck, check:
+- `kubectl logs -n argocd deploy/argocd-image-updater` for the latest
+  cycle's outcome.
+- The Application's `spec.source.kustomize.images` for the current
+  digest pin.
 
 ---
 
