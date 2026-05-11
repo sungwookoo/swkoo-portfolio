@@ -51,3 +51,44 @@ export function usePreview(fullName: string | null): {
   );
   return { preview: data, isLoading, error };
 }
+
+export interface RegisterResponse {
+  ok: true;
+  fullName: string;
+  subdomain: string;
+  liveUrl: string;
+  userRepoCommit: string;
+  manifestRepoCommit: string;
+}
+
+export interface RegisterError {
+  reason: string;
+  message: string;
+}
+
+export async function registerDeploy(fullName: string): Promise<RegisterResponse> {
+  const response = await fetch(`${API_BASE_URL}/deploy/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fullName }),
+  });
+  if (!response.ok) {
+    let payload: { message?: string | RegisterError } = {};
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      // ignore parse error
+    }
+    const detail = payload.message;
+    if (detail && typeof detail === 'object' && 'reason' in detail) {
+      const err = new Error(detail.message ?? detail.reason) as Error & { reason?: string };
+      err.reason = detail.reason;
+      throw err;
+    }
+    throw new Error(
+      typeof detail === 'string' ? detail : `register failed (${response.status})`
+    );
+  }
+  return (await response.json()) as RegisterResponse;
+}

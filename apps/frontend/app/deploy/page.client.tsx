@@ -1,11 +1,18 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 
 import { loginUrl, logout, ME_SWR_KEY, useMe } from '@/lib/auth';
-import { RepoSummary, StackPreview, useRepos, usePreview } from '@/lib/deploy';
+import {
+  registerDeploy,
+  RegisterResponse,
+  RepoSummary,
+  StackPreview,
+  useRepos,
+  usePreview,
+} from '@/lib/deploy';
 
 const GITHUB_ICON_PATH =
   'M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.111.82-.261.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12';
@@ -284,12 +291,18 @@ function PreviewPanel({ fullName }: { fullName: string }): JSX.Element {
       <hr className="my-4 border-slate-800" />
       {isLoading && <p className="text-sm text-slate-400">스택 감지 중…</p>}
       {error && <p className="text-sm text-amber-400">감지 실패: {error.message}</p>}
-      {preview && <PreviewResult preview={preview} />}
+      {preview && <PreviewResult fullName={fullName} preview={preview} />}
     </div>
   );
 }
 
-function PreviewResult({ preview }: { preview: StackPreview }): JSX.Element {
+function PreviewResult({
+  fullName,
+  preview,
+}: {
+  fullName: string;
+  preview: StackPreview;
+}): JSX.Element {
   if (preview.stack === 'unsupported') {
     return (
       <div className="space-y-2">
@@ -299,7 +312,7 @@ function PreviewResult({ preview }: { preview: StackPreview }): JSX.Element {
     );
   }
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-emerald-400">✓ Next.js 앱으로 감지</p>
       <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
         {preview.packageName && (
@@ -317,9 +330,106 @@ function PreviewResult({ preview }: { preview: StackPreview }): JSX.Element {
           </>
         )}
       </dl>
-      <p className="pt-2 text-xs text-slate-500">
-        다음 단계(Dockerfile/workflow 자동 commit + 배포)는 곧 추가됩니다.
+      <DeployTrigger fullName={fullName} />
+    </div>
+  );
+}
+
+type DeployState =
+  | { kind: 'idle' }
+  | { kind: 'pending' }
+  | { kind: 'success'; result: RegisterResponse }
+  | { kind: 'error'; message: string; reason?: string };
+
+function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
+  const [state, setState] = useState<DeployState>({ kind: 'idle' });
+
+  const handleDeploy = async (): Promise<void> => {
+    setState({ kind: 'pending' });
+    try {
+      const result = await registerDeploy(fullName);
+      setState({ kind: 'success', result });
+    } catch (err) {
+      const e = err as Error & { reason?: string };
+      setState({ kind: 'error', message: e.message, reason: e.reason });
+    }
+  };
+
+  if (state.kind === 'success') {
+    return <DeploySuccess result={state.result} />;
+  }
+
+  return (
+    <div className="space-y-2 border-t border-slate-800 pt-4">
+      {state.kind === 'error' && (
+        <p className="text-sm text-amber-400">
+          {state.reason && <span className="font-mono text-xs">[{state.reason}] </span>}
+          {state.message}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={handleDeploy}
+        disabled={state.kind === 'pending'}
+        className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+      >
+        {state.kind === 'pending' ? '배포 시작 중…' : 'Deploy →'}
+      </button>
+      <p className="text-xs text-slate-500">
+        Dockerfile + GitHub Actions workflow를 본인 repo에 commit하고, swkoo-portfolio에
+        매니페스트를 추가합니다. 한 사용자당 1개 앱만 등록 가능 (v0).
       </p>
+    </div>
+  );
+}
+
+function DeploySuccess({ result }: { result: RegisterResponse }): JSX.Element {
+  const [owner, repo] = result.fullName.split('/');
+  return (
+    <div className="space-y-3 rounded-md border border-emerald-600/40 bg-emerald-500/5 p-4">
+      <p className="text-emerald-400">✓ 배포 시작됨</p>
+      <p className="text-sm text-slate-300">
+        라이브 URL:{' '}
+        <a
+          href={result.liveUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="font-mono text-emerald-300 underline underline-offset-2 hover:text-emerald-200"
+        >
+          {result.liveUrl}
+        </a>
+      </p>
+      <p className="text-xs text-slate-400">
+        빌드 + 첫 배포까지 ~5분 소요. URL이 아직 응답 안 하면 잠시 후 새로고침.
+      </p>
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs text-slate-500">
+        <dt>your repo commit</dt>
+        <dd>
+          <a
+            href={`https://github.com/${result.fullName}/commit/${result.userRepoCommit}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-slate-400 hover:text-slate-200"
+          >
+            {result.userRepoCommit.slice(0, 7)}
+          </a>
+          {' '}
+          (Dockerfile + workflow)
+        </dd>
+        <dt>manifest commit</dt>
+        <dd>
+          <a
+            href={`https://github.com/sungwookoo/swkoo-portfolio/commit/${result.manifestRepoCommit}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-slate-400 hover:text-slate-200"
+          >
+            {result.manifestRepoCommit.slice(0, 7)}
+          </a>
+          {' '}
+          (swkoo-portfolio)
+        </dd>
+      </dl>
     </div>
   );
 }

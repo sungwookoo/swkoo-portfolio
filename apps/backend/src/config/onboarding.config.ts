@@ -11,6 +11,10 @@ export interface OnboardingConfig {
   // CSV of github logins allowed to call POST /api/deploy/register.
   // Empty list = nobody can deploy (everyone can still sign in for waitlist).
   deployAllowlist: string[];
+  // Where /api/deploy/register commits the rendered manifests.
+  manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
+  manifestBranch: string;
+  appsDomain: string; // for subdomain construction, e.g. "apps.swkoo.kr"
 }
 
 export const onboardingConfig = registerAs(
@@ -27,5 +31,8 @@ export const onboardingConfig = registerAs(
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-portfolio',
+    manifestBranch: process.env.MANIFEST_BRANCH ?? 'main',
+    appsDomain: process.env.APPS_DOMAIN ?? 'apps.swkoo.kr',
   })
 );

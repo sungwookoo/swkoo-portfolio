@@ -127,6 +127,16 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     return stmt.get(id) as UserRow | undefined;
   }
 
+  findByLogin(login: string): UserRow | undefined {
+    const stmt = this.db.prepare(`
+      SELECT id, github_id AS githubId, github_login AS githubLogin,
+             name, email, avatar_url AS avatarUrl,
+             created_at AS createdAt, last_login_at AS lastLoginAt
+      FROM users WHERE github_login = ?
+    `);
+    return stmt.get(login) as UserRow | undefined;
+  }
+
   audit(entry: AuditLogInsert): void {
     const stmt = this.db.prepare(`
       INSERT INTO audit_log (actor, action, target, reason, meta_json)
