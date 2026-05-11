@@ -64,13 +64,15 @@ RUN mkdir -p public && npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache tini && adduser -D -u ${params.uid} app
+# node:*-alpine ships a 'node' user at uid 1000 — reuse it instead of
+# creating a duplicate (adduser would fail with uid conflict).
+RUN apk add --no-cache tini
 ENV NODE_ENV=production PORT=${params.port}
-COPY --from=builder --chown=app:app /app/.next ./.next
-COPY --from=builder --chown=app:app /app/public ./public
-COPY --from=builder --chown=app:app /app/package*.json ./
-COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-USER app
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/package*.json ./
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+USER node
 EXPOSE ${params.port}
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["npx", "next", "start", "-p", "${params.port}"]
