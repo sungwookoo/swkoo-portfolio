@@ -14,11 +14,9 @@ import { ConfigType } from '@nestjs/config';
 import type { Request, Response } from 'express';
 
 import { onboardingConfig } from '../config/onboarding.config';
-import { AuthService } from './auth.service';
+import { AuthService, OAUTH_STATE_COOKIE, SESSION_COOKIE } from './auth.service';
 import { UsersRepository } from './users.repository';
 
-const SESSION_COOKIE = 'swkoo_session';
-const OAUTH_STATE_COOKIE = 'swkoo_oauth_state';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -101,6 +99,9 @@ export class AuthController {
       throw new UnauthorizedException();
     }
     const isAllowed = this.config.deployAllowlist.includes(user.githubLogin);
+    // requiresReauth = user signed in before token storage existed, or refresh
+    // chain broke. Frontend should prompt them to sign in again.
+    const requiresReauth = this.users.getTokens(user.id) === null;
     return {
       id: user.id,
       githubLogin: user.githubLogin,
@@ -108,6 +109,7 @@ export class AuthController {
       email: user.email,
       avatarUrl: user.avatarUrl,
       isAllowed,
+      requiresReauth,
       brandName: this.config.brandName,
     };
   }

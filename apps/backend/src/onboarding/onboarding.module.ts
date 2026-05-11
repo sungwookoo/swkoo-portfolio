@@ -5,6 +5,7 @@ import { onboardingConfig } from '../config/onboarding.config';
 import { webhooksConfig } from '../config/webhooks.config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { UsersRepository } from './users.repository';
 
 @Module({
@@ -13,7 +14,7 @@ import { UsersRepository } from './users.repository';
     ConfigModule.forFeature(webhooksConfig),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UsersRepository],
-  exports: [AuthService, UsersRepository],
+  providers: [AuthService, UsersRepository, JwtAuthGuard],
+  exports: [AuthService, UsersRepository, JwtAuthGuard],
 })
 export class OnboardingModule {}

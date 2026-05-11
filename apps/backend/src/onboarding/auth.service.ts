@@ -11,9 +11,15 @@ interface GithubTokenResponse {
   access_token?: string;
   token_type?: string;
   scope?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
   error?: string;
   error_description?: string;
 }
+
+export const SESSION_COOKIE = 'swkoo_session';
+export const OAUTH_STATE_COOKIE = 'swkoo_oauth_state';
 
 interface GithubUserResponse {
   id: number;
@@ -106,6 +112,12 @@ export class AuthService {
       avatarUrl: gh.avatar_url,
     });
 
+    this.users.saveTokens(user.id, {
+      accessToken,
+      refreshToken: tokenResp.data.refresh_token ?? null,
+      expiresAt: this.computeExpiry(tokenResp.data.expires_in),
+    });
+
     this.users.audit({
       actor: gh.login,
       action: 'SIGN_IN',
@@ -115,6 +127,64 @@ export class AuthService {
     });
 
     return user;
+  }
+
+  /**
+   * Returns a non-expired user access token for the given user, refreshing it
+   * via GitHub if necessary. Throws if no token is stored (user must re-auth).
+   */
+  async getValidAccessToken(userId: number): Promise<string> {
+    const tokens = this.users.getTokens(userId);
+    if (!tokens) {
+      throw new Error('REAUTH_REQUIRED');
+    }
+    const expiresMs = new Date(tokens.expiresAt).getTime();
+    // Refresh ~1 minute before actual expiry to avoid races.
+    if (expiresMs > Date.now() + 60_000) {
+      return tokens.accessToken;
+    }
+    if (!tokens.refreshToken) {
+      throw new Error('REAUTH_REQUIRED');
+    }
+    const refreshed = await this.refreshAccessToken(tokens.refreshToken);
+    this.users.saveTokens(userId, refreshed);
+    return refreshed.accessToken;
+  }
+
+  private async refreshAccessToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string | null;
+    expiresAt: string;
+  }> {
+    if (!this.config.githubAppClientId || !this.config.githubAppClientSecret) {
+      throw new Error('GITHUB_APP_CLIENT_ID/SECRET not configured');
+    }
+    const resp = await axios.post<GithubTokenResponse>(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: this.config.githubAppClientId,
+        client_secret: this.config.githubAppClientSecret,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      },
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!resp.data.access_token) {
+      throw new Error('REAUTH_REQUIRED');
+    }
+    return {
+      accessToken: resp.data.access_token,
+      refreshToken: resp.data.refresh_token ?? refreshToken,
+      expiresAt: this.computeExpiry(resp.data.expires_in),
+    };
+  }
+
+  private computeExpiry(expiresInSec: number | undefined): string {
+    // GitHub Apps with "Expire user authorization tokens" enabled return
+    // expires_in (8h default). Without that setting, fall back to a long
+    // window so we don't constantly try to refresh.
+    const seconds = expiresInSec ?? 8 * 60 * 60;
+    return new Date(Date.now() + seconds * 1000).toISOString();
   }
 
   signSessionToken(user: UserRow): string {

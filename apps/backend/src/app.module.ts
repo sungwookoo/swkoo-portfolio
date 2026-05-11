@@ -8,6 +8,7 @@ import { pipelinesConfig } from './config/pipelines.config';
 import { webhooksConfig } from './config/webhooks.config';
 
 import { AlertsModule } from './alerts/alerts.module';
+import { DeployModule } from './deploy/deploy.module';
 import { HealthController } from './health/health.controller';
 import { MetricsModule } from './metrics/metrics.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
@@ -27,7 +28,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AlertsModule,
     MetricsModule,
     WebhooksModule,
-    OnboardingModule
+    OnboardingModule,
+    DeployModule
   ],
   controllers: [HealthController, OverviewController],
   providers: [OverviewService]

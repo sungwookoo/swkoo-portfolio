@@ -9,6 +9,7 @@ export interface Me {
   email: string | null;
   avatarUrl: string | null;
   isAllowed: boolean;
+  requiresReauth: boolean;
   brandName: string;
 }
 
