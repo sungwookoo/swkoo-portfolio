@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
 import type { Request } from 'express';
 
@@ -8,6 +9,8 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = new Logger('Bootstrap');
+
+  app.use(cookieParser());
 
   // Preserve raw body buffer for HMAC signature verification on webhook routes.
   const captureRaw = (req: Request & { rawBody?: Buffer }, _res: unknown, buf: Buffer) => {
