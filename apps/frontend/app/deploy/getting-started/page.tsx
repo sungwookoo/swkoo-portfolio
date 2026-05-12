@@ -1,0 +1,130 @@
+import Link from 'next/link';
+
+export const metadata = {
+  title: '시작 가이드 — swkoo.kr',
+  description: 'swkoo.kr 배포 전 준비사항과 자동으로 처리되는 일.',
+};
+
+const sections = [
+  {
+    n: 1,
+    title: 'Next.js 앱이 GitHub repo에 있어야 합니다',
+    body: '본인 owner인 repo에 Next.js 앱이 푸시돼 있어야 합니다. 없으시면 한 줄로 시작:',
+    code: 'npx create-next-app@latest my-app',
+    after:
+      '특별한 설정 불필요. `output: "standalone"` 같은 옵션도 안 켜셔도 동작합니다.',
+  },
+  {
+    n: 2,
+    title: '기본 브랜치는 `main`',
+    body: '자동 빌드 트리거가 `main` 브랜치 push에 걸려 있습니다. 기본 브랜치가 `master`면 빌드가 시작되지 않으므로 GitHub repo settings에서 `main`으로 변경해주세요.',
+  },
+  {
+    n: 3,
+    title: 'ARM64 호환 의존성',
+    body: '클러스터 노드는 ARM64 (OCI A1.Flex). 네이티브 binding이 있는 패키지 (`sharp`, `bcrypt` 등)는 ARM64 prebuilt를 지원해야 동작합니다. 인기 패키지는 대부분 자동 지원하지만, 빌드 실패 시 첫 의심 지점.',
+  },
+  {
+    n: 4,
+    title: 'v0 제약 — 미리 알아두실 것',
+    body: '현재 단계에서 지원하지 않는 것들:',
+    bullets: [
+      '런타임 환경변수 주입 ❌ (빌드 시점 GitHub Actions secrets는 가능)',
+      '클러스터 내 영속 스토리지 ❌ — Supabase·Neon 같은 외부 DB 연결은 자유',
+      '한 사용자당 앱 1개 (재배포는 같은 앱 슬롯을 덮어씁니다)',
+    ],
+  },
+  {
+    n: 5,
+    title: 'Deploy 클릭 시 자동으로 일어나는 일',
+    body: '아래 작업을 백엔드가 대신 처리합니다 — 사용자가 만들거나 만질 필요 없음:',
+    bullets: [
+      '본인 repo에 `Dockerfile` + `.github/workflows/swkoo-build.yml` atomic commit',
+      '운영 repo (`swkoo-portfolio`)에 사용자 namespace · ResourceQuota · NetworkPolicy · Deployment · Service · Ingress 매니페스트 commit',
+      'GitHub Actions가 ARM64 이미지 빌드 → 본인 GHCR로 push',
+      'argocd-image-updater가 digest 감지 → ArgoCD가 5분 안에 `<login>-<repo>.apps.swkoo.kr` 로 라이브 배포',
+    ],
+  },
+] as const;
+
+export default function GettingStartedPage(): JSX.Element {
+  return (
+    <main className="relative isolate w-full px-6 py-20 sm:py-24">
+      <div className="mx-auto w-full max-w-3xl space-y-12">
+        <header className="space-y-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+            Getting started
+          </p>
+          <h1 className="display-tight display-gradient text-balance text-4xl font-semibold leading-[1.05] sm:text-5xl">
+            처음 배포하시나요?
+          </h1>
+          <p className="text-balance text-lg leading-relaxed text-zinc-400">
+            5분 안에 끝납니다. 그 전에 알아두면 좋은 것들 다섯 가지.
+          </p>
+        </header>
+
+        <ol className="flex flex-col">
+          {sections.map((s) => (
+            <li
+              key={s.n}
+              className="grid grid-cols-12 items-start gap-y-3 border-t border-zinc-900 py-10 lg:gap-x-8"
+            >
+              <div className="col-span-12 lg:col-span-2">
+                <span className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Step / {String(s.n).padStart(2, '0')}
+                </span>
+              </div>
+              <div className="col-span-12 space-y-3 lg:col-span-10">
+                <h2 className="display-tight text-balance text-xl font-semibold text-zinc-50 sm:text-2xl">
+                  {s.title}
+                </h2>
+                <p className="text-balance text-base leading-relaxed text-zinc-400">
+                  {s.body}
+                </p>
+                {'code' in s && s.code && (
+                  <pre className="overflow-x-auto rounded-md border border-zinc-900 bg-zinc-950 p-3 font-mono text-xs text-zinc-300">
+                    <span className="text-zinc-600">$ </span>
+                    {s.code}
+                  </pre>
+                )}
+                {'after' in s && s.after && (
+                  <p className="text-sm leading-relaxed text-zinc-500">{s.after}</p>
+                )}
+                {'bullets' in s && s.bullets && (
+                  <ul className="space-y-2 pt-1">
+                    {s.bullets.map((b) => (
+                      <li
+                        key={b}
+                        className="flex items-start gap-3 text-sm leading-relaxed text-zinc-400"
+                      >
+                        <span className="mt-2 inline-block size-1 shrink-0 rounded-full bg-zinc-600" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))}
+          <li className="border-t border-zinc-900" />
+        </ol>
+
+        <div className="flex flex-wrap items-center gap-4 pt-2">
+          <Link
+            href="/deploy"
+            className="group inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-zinc-200"
+          >
+            <span>Deploy 시작하기</span>
+            <span className="transition-transform group-hover:translate-x-1">→</span>
+          </Link>
+          <Link
+            href="/"
+            className="text-sm text-zinc-500 transition-colors hover:text-zinc-100"
+          >
+            ← 홈으로
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}

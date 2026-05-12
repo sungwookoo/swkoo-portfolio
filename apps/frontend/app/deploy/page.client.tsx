@@ -137,7 +137,15 @@ export function DeployPageClient(): JSX.Element {
         <CurrentBanner />
 
         <div className="space-y-3">
-          <h1 className="text-2xl font-semibold text-slate-100">어떤 repo를 배포할까요?</h1>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="text-2xl font-semibold text-slate-100">어떤 repo를 배포할까요?</h1>
+            <Link
+              href="/deploy/getting-started"
+              className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+            >
+              처음이세요? 시작 가이드 →
+            </Link>
+          </div>
           <p className="text-sm text-slate-500">
             본인이 owner인 GitHub repo 30개 (최근 업데이트 순). 클릭하면 swkoo.kr이 자동
             으로 스택을 감지합니다.
@@ -368,6 +376,12 @@ function PreviewResult({
       <div className="space-y-2">
         <p className="text-amber-400">⚠️ 지원하지 않는 스택</p>
         <p className="text-sm text-slate-400">{preview.reason}</p>
+        <Link
+          href="/deploy/getting-started"
+          className="inline-block text-xs text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+        >
+          지원 스택 / 요건 보기 →
+        </Link>
       </div>
     );
   }

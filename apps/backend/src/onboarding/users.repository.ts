@@ -150,6 +150,15 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     return row ? this.hydrate(row) : undefined;
   }
 
+  findByGithubId(githubId: number): UserRow | undefined {
+    const stmt = this.db.prepare(`
+      SELECT ${this.userColumns}
+      FROM users WHERE github_id = ?
+    `);
+    const row = stmt.get(githubId);
+    return row ? this.hydrate(row) : undefined;
+  }
+
   listAllUsers(): UserRow[] {
     const stmt = this.db.prepare(`
       SELECT ${this.userColumns}

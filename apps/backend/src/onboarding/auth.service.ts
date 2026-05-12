@@ -119,6 +119,9 @@ export class AuthService implements OnApplicationBootstrap {
     const primaryEmail =
       emailsResp.data.find((e) => e.primary && e.verified)?.email ?? gh.email ?? null;
 
+    // Decide "first sign-in" before upsert so we can fire a webhook only once.
+    const isNewSignup = this.users.findByGithubId(gh.id) === undefined;
+
     const user = this.users.upsertUser({
       githubId: gh.id,
       githubLogin: gh.login,
@@ -126,6 +129,11 @@ export class AuthService implements OnApplicationBootstrap {
       email: primaryEmail,
       avatarUrl: gh.avatar_url,
     });
+
+    if (isNewSignup) {
+      // Fire-and-forget — failures are logged but never block sign-in.
+      void this.notifyDiscordNewSignup(user);
+    }
 
     // Lazy seed for users not yet in DB at boot time but listed in env.
     if (!user.isAllowed) {
@@ -202,6 +210,23 @@ export class AuthService implements OnApplicationBootstrap {
       refreshToken: resp.data.refresh_token ?? refreshToken,
       expiresAt: this.computeExpiry(resp.data.expires_in),
     };
+  }
+
+  private async notifyDiscordNewSignup(user: UserRow): Promise<void> {
+    const url = this.config.discordWebhookUrl;
+    if (!url) return;
+    const lines = [
+      '🆕 새 사용자 가입',
+      `**@${user.githubLogin}** — https://github.com/${user.githubLogin}`,
+      user.name ? `이름: ${user.name}` : null,
+      user.email ? `이메일: ${user.email}` : null,
+      '승인: https://swkoo.kr/admin',
+    ].filter(Boolean);
+    try {
+      await axios.post(url, { content: lines.join('\n') }, { timeout: 5000 });
+    } catch (err) {
+      this.logger.error(`Discord webhook failed: ${(err as Error).message}`);
+    }
   }
 
   private computeExpiry(expiresInSec: number | undefined): string {

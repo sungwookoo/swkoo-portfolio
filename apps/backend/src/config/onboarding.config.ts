@@ -15,6 +15,9 @@ export interface OnboardingConfig {
   // CSV of github logins authorized for /admin/* routes. Always env-managed
   // (no DB or UI flow to elevate admin). Empty = nobody is admin.
   adminLogins: string[];
+  // Discord webhook URL fired on first sign-in for a given github_id. Empty
+  // disables notifications. Failures are logged but don't block sign-in.
+  discordWebhookUrl: string | undefined;
   // Where /api/deploy/register commits the rendered manifests.
   manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
   manifestBranch: string;
@@ -39,6 +42,7 @@ export const onboardingConfig = registerAs(
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || undefined,
     manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-portfolio',
     manifestBranch: process.env.MANIFEST_BRANCH ?? 'main',
     appsDomain: process.env.APPS_DOMAIN ?? 'apps.swkoo.kr',
