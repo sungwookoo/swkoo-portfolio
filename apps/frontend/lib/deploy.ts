@@ -61,6 +61,58 @@ export interface RegisterResponse {
   manifestRepoCommit: string;
 }
 
+export interface CurrentDeployment {
+  login: string;
+  repo: string;
+  fullName: string;
+  appName: string;
+  liveUrl: string;
+  syncStatus: string | null;
+  healthStatus: string | null;
+}
+
+export const CURRENT_SWR_KEY = `${API_BASE_URL}/deploy/current`;
+
+export function useCurrent(enabled: boolean): {
+  current: CurrentDeployment | null | undefined;
+  isLoading: boolean;
+  error: Error | undefined;
+} {
+  const { data, error, isLoading } = useSWR<CurrentDeployment | null>(
+    enabled ? CURRENT_SWR_KEY : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  return { current: data, isLoading, error };
+}
+
+export async function deleteCurrentDeployment(): Promise<{ commit: string }> {
+  const response = await fetch(`${API_BASE_URL}/deploy`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    let payload: { message?: string | { reason?: string; message?: string } } = {};
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      // ignore parse errors
+    }
+    const detail = payload.message;
+    if (detail && typeof detail === 'object' && 'reason' in detail) {
+      const err = new Error(detail.message ?? detail.reason ?? 'delete failed') as Error & {
+        reason?: string;
+      };
+      err.reason = detail.reason;
+      throw err;
+    }
+    throw new Error(
+      typeof detail === 'string' ? detail : `delete failed (${response.status})`
+    );
+  }
+  return (await response.json()) as { commit: string };
+}
+
 export interface RegisterError {
   reason: string;
   message: string;

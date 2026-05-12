@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 
 import { loginUrl, logout, ME_SWR_KEY, useMe } from '@/lib/auth';
 import {
+  CurrentDeployment,
   registerDeploy,
   RepoSummary,
   StackPreview,
+  useCurrent,
   useRepos,
   usePreview,
 } from '@/lib/deploy';
@@ -131,6 +134,8 @@ export function DeployPageClient(): JSX.Element {
           </button>
         </header>
 
+        <CurrentBanner />
+
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold text-slate-100">어떤 repo를 배포할까요?</h1>
           <p className="text-sm text-slate-500">
@@ -152,6 +157,46 @@ export function DeployPageClient(): JSX.Element {
         {selectedRepo && <PreviewPanel fullName={selectedRepo} />}
       </div>
     </Shell>
+  );
+}
+
+function CurrentBanner(): JSX.Element | null {
+  const { current, isLoading } = useCurrent(true);
+  if (isLoading || !current) return null;
+  const healthy = current.syncStatus === 'Synced' && current.healthStatus === 'Healthy';
+  return (
+    <div
+      className={
+        'flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ' +
+        (healthy
+          ? 'border-emerald-600/40 bg-emerald-500/5'
+          : 'border-slate-800 bg-slate-900/40')
+      }
+    >
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-wide text-slate-500">
+          현재 배포 중
+        </p>
+        <p className="font-mono text-slate-200">{current.fullName}</p>
+        <p className="text-xs text-slate-400">
+          {healthy ? '✓ Synced / Healthy — ' : '⏳ '}
+          <a
+            href={current.liveUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:underline"
+          >
+            {current.liveUrl}
+          </a>
+        </p>
+      </div>
+      <Link
+        href={`/deploy/${encodeURIComponent(current.login)}/${encodeURIComponent(current.repo)}`}
+        className="inline-flex shrink-0 items-center gap-1 self-start rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800/50 sm:self-auto"
+      >
+        상세 보기 →
+      </Link>
+    </div>
   );
 }
 

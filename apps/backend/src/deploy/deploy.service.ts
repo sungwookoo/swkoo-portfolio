@@ -67,6 +67,16 @@ export interface StageInfo {
   link?: string;
 }
 
+export interface CurrentDeployment {
+  login: string;
+  repo: string;
+  fullName: string;
+  appName: string;
+  liveUrl: string;
+  syncStatus: string | null;
+  healthStatus: string | null;
+}
+
 export interface DeploymentStatus {
   login: string;
   repo: string;
@@ -305,6 +315,85 @@ export class DeployService {
       userRepoCommit,
       manifestRepoCommit,
     };
+  }
+
+  /** Returns the user's currently-registered deployment, if any. Reads
+   * the ArgoCD Application named `swkoo-user-<login>` and parses the
+   * image-list annotation for the source repo. Null when the user has
+   * no deployment. */
+  async getCurrentDeployment(login: string): Promise<CurrentDeployment | null> {
+    const loginLc = login.toLowerCase();
+    const app = await this.argo.getApplication(`swkoo-user-${loginLc}`).catch(() => null);
+    if (!app) return null;
+    const annotations = app.metadata?.annotations ?? {};
+    const imageList = annotations['argocd-image-updater.argoproj.io/image-list'];
+    if (!imageList) return null;
+    // Format: "app=ghcr.io/<login>/<repo>:latest"
+    const match = imageList.match(/=ghcr\.io\/([^/]+)\/([^:]+)/);
+    if (!match) return null;
+    const repo = match[2];
+    const appName = sanitizeName(repo);
+    const subdomain = sanitizeName(`${loginLc}-${appName}`, 53);
+    return {
+      login: loginLc,
+      repo,
+      fullName: `${loginLc}/${repo}`,
+      appName,
+      liveUrl: `https://${subdomain}.${this.config.appsDomain}`,
+      syncStatus: app.status?.sync?.status ?? null,
+      healthStatus: app.status?.health?.status ?? null,
+    };
+  }
+
+  /** Atomic removal of the user's deploy/users/<login>/ directory in
+   * the manifest repo. ApplicationSet auto-prunes the matching Application
+   * on its next refresh (~3 min), cascading to namespace deletion. The
+   * user's source repo (Dockerfile + workflow + GHCR images) is untouched. */
+  async deleteDeployment(userLogin: string): Promise<{ commit: string }> {
+    const loginLc = userLogin.toLowerCase();
+    const allowlistLc = this.config.deployAllowlist.map((s) => s.toLowerCase());
+    if (!allowlistLc.includes(loginLc)) {
+      throw new ForbiddenException({ reason: 'BETA_ALLOWLIST', message: '베타 액세스 권한이 없습니다.' });
+    }
+    const [owner, repo] = this.config.manifestRepo.split('/');
+    let commit: string;
+    try {
+      const token = await this.githubApp.getInstallationTokenForRepo(owner, repo);
+      commit = await this.githubApp.commitFilesAtomic({
+        owner,
+        repo,
+        branch: this.config.manifestBranch,
+        files: {},
+        message: `feat(deploy): unregister ${loginLc} via swkoo.kr/deploy\n\nUser-initiated removal.`,
+        token,
+        replaceDirPath: `deploy/users/${loginLc}`,
+      });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === 'NOTHING_TO_COMMIT') {
+        this.users.audit({
+          actor: userLogin,
+          action: 'DEPLOY_UNREGISTER',
+          target: null,
+          reason: 'NO_EXISTING_DEPLOYMENT',
+          metaJson: null,
+        });
+        throw new ForbiddenException({
+          reason: 'NO_EXISTING_DEPLOYMENT',
+          message: '제거할 배포가 없습니다.',
+        });
+      }
+      throw err;
+    }
+
+    this.users.audit({
+      actor: userLogin,
+      action: 'DEPLOY_UNREGISTER',
+      target: null,
+      reason: null,
+      metaJson: JSON.stringify({ commit }),
+    });
+    return { commit };
   }
 
   /** Aggregated status for the progress page. Each stage is computed

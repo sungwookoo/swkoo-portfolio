@@ -172,6 +172,10 @@ export class GithubAppService {
       });
     }
 
+    if (deletions.length === 0 && blobEntries.length === 0) {
+      throw new Error('NOTHING_TO_COMMIT');
+    }
+
     const newTreeResp = await axios.post<{ sha: string }>(
       `https://api.github.com/repos/${owner}/${repo}/git/trees`,
       { base_tree: baseTreeSha, tree: [...deletions, ...blobEntries] },

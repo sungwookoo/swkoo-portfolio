@@ -1,8 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSWRConfig } from 'swr';
 
 import {
+  CURRENT_SWR_KEY,
+  deleteCurrentDeployment,
   DeploymentStatus,
   StageInfo,
   StageStatus,
@@ -42,6 +47,8 @@ export function StatusClient({ login, repo }: StatusClientProps): JSX.Element {
         )}
         {status && <Checklist status={status} />}
 
+        {status && <DeleteCard login={login} repo={repo} />}
+
         <footer className="border-t border-slate-800 pt-6">
           <Link
             href="/deploy"
@@ -52,6 +59,84 @@ export function StatusClient({ login, repo }: StatusClientProps): JSX.Element {
         </footer>
       </div>
     </main>
+  );
+}
+
+type DeleteState =
+  | { kind: 'idle' }
+  | { kind: 'confirming' }
+  | { kind: 'pending' }
+  | { kind: 'error'; message: string };
+
+function DeleteCard({ login, repo }: { login: string; repo: string }): JSX.Element {
+  const router = useRouter();
+  const { mutate } = useSWRConfig();
+  const [state, setState] = useState<DeleteState>({ kind: 'idle' });
+
+  const handleConfirm = async (): Promise<void> => {
+    setState({ kind: 'pending' });
+    try {
+      await deleteCurrentDeployment();
+      await mutate(CURRENT_SWR_KEY, null, { revalidate: false });
+      router.push('/deploy?removed=1');
+    } catch (err) {
+      setState({ kind: 'error', message: (err as Error).message });
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+      <p className="text-sm font-medium text-slate-300">위험 영역</p>
+      {state.kind === 'idle' && (
+        <button
+          type="button"
+          onClick={() => setState({ kind: 'confirming' })}
+          className="text-sm text-red-400 underline-offset-2 hover:text-red-300 hover:underline"
+        >
+          이 앱 제거하기
+        </button>
+      )}
+      {state.kind === 'confirming' && (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-300">
+            <span className="font-mono">{login}/{repo}</span>의 매니페스트가 swkoo-portfolio에서
+            삭제되고 ~1-3분 안에 라이브 URL이 다운됩니다.
+          </p>
+          <p className="text-xs text-slate-500">
+            본인 repo의 Dockerfile + workflow는 그대로 남습니다 — 필요하면 GitHub에서 직접 삭제하세요.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-500"
+            >
+              제거 확정
+            </button>
+            <button
+              type="button"
+              onClick={() => setState({ kind: 'idle' })}
+              className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800/50"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+      {state.kind === 'pending' && <p className="text-sm text-slate-400">제거 중…</p>}
+      {state.kind === 'error' && (
+        <div className="space-y-2">
+          <p className="text-sm text-amber-400">제거 실패: {state.message}</p>
+          <button
+            type="button"
+            onClick={() => setState({ kind: 'idle' })}
+            className="text-xs text-slate-500 hover:text-slate-300"
+          >
+            돌아가기
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

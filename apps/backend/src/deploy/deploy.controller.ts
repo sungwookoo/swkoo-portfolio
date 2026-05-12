@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -13,6 +15,7 @@ import { IsString, Matches } from 'class-validator';
 
 import { AuthedRequest, JwtAuthGuard } from '../onboarding/jwt-auth.guard';
 import {
+  CurrentDeployment,
   DeploymentStatus,
   DeployService,
   RegisterResponse,
@@ -66,5 +69,16 @@ export class DeployController {
     @Param('repo') repo: string
   ): Promise<DeploymentStatus> {
     return this.service.getDeploymentStatus(req.user.id, login, repo);
+  }
+
+  @Get('current')
+  getCurrent(@Req() req: AuthedRequest): Promise<CurrentDeployment | null> {
+    return this.service.getCurrentDeployment(req.user.githubLogin);
+  }
+
+  @Delete()
+  @HttpCode(200)
+  remove(@Req() req: AuthedRequest): Promise<{ commit: string }> {
+    return this.service.deleteDeployment(req.user.githubLogin);
   }
 }
