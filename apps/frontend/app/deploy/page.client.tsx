@@ -161,8 +161,26 @@ export function DeployPageClient(): JSX.Element {
 }
 
 function CurrentBanner(): JSX.Element | null {
-  const { current, isLoading } = useCurrent(true);
+  // Poll every 5s during the deleting window so the banner clears on its
+  // own once ApplicationSet finishes pruning (~1-3 min).
+  const { current, isLoading } = useCurrent(true, { refreshInterval: 5000 });
   if (isLoading || !current) return null;
+
+  if (current.state === 'deleting') {
+    return (
+      <div className="flex flex-col gap-3 rounded-lg border border-amber-600/40 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-wide text-amber-400">삭제 진행 중</p>
+          <p className="font-mono text-slate-200">{current.fullName}</p>
+          <p className="text-xs text-slate-400">
+            매니페스트는 제거됨. ArgoCD가 ~1-3분 안에 Application과 namespace를 prune
+            합니다. 라이브 URL 응답이 끊기면 이 배너도 사라집니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const healthy = current.syncStatus === 'Synced' && current.healthStatus === 'Healthy';
   return (
     <div
@@ -174,9 +192,7 @@ function CurrentBanner(): JSX.Element | null {
       }
     >
       <div className="space-y-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500">
-          현재 배포 중
-        </p>
+        <p className="text-xs uppercase tracking-wide text-slate-500">현재 배포 중</p>
         <p className="font-mono text-slate-200">{current.fullName}</p>
         <p className="text-xs text-slate-400">
           {healthy ? '✓ Synced / Healthy — ' : '⏳ '}

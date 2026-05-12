@@ -75,6 +75,10 @@ export interface CurrentDeployment {
   liveUrl: string;
   syncStatus: string | null;
   healthStatus: string | null;
+  // 'active' — metadata.yaml exists.
+  // 'deleting' — metadata.yaml is gone but the ArgoCD Application lingers
+  // until ApplicationSet prunes it (~1-3 min).
+  state: 'active' | 'deleting';
 }
 
 export interface DeploymentStatus {
@@ -317,32 +321,82 @@ export class DeployService {
     };
   }
 
-  /** Returns the user's currently-registered deployment, if any. Reads
-   * the ArgoCD Application named `swkoo-user-<login>` and parses the
-   * image-list annotation for the source repo. Null when the user has
-   * no deployment. */
+  /** Returns the user's currently-registered deployment, if any.
+   * Source-of-truth is the metadata.yaml in the manifest repo (git is
+   * authoritative); ArgoCD app data is layered in for sync/health/state.
+   * After a delete the metadata is gone immediately, but the ArgoCD app
+   * lingers ~1-3 min until ApplicationSet prunes it — that window is
+   * exposed as state === 'deleting'. */
   async getCurrentDeployment(login: string): Promise<CurrentDeployment | null> {
     const loginLc = login.toLowerCase();
-    const app = await this.argo.getApplication(`swkoo-user-${loginLc}`).catch(() => null);
-    if (!app) return null;
-    const annotations = app.metadata?.annotations ?? {};
-    const imageList = annotations['argocd-image-updater.argoproj.io/image-list'];
-    if (!imageList) return null;
-    // Format: "app=ghcr.io/<login>/<repo>:latest"
-    const match = imageList.match(/=ghcr\.io\/([^/]+)\/([^:]+)/);
-    if (!match) return null;
-    const repo = match[2];
-    const appName = sanitizeName(repo);
+    const [manifestOwner, manifestRepoName] = this.config.manifestRepo.split('/');
+
+    const metadataContent = await this.readManifestFile(
+      manifestOwner,
+      manifestRepoName,
+      `deploy/users/${loginLc}/metadata.yaml`
+    );
+    const app = await this.argo
+      .getApplication(`swkoo-user-${loginLc}`)
+      .catch(() => null);
+
+    if (!metadataContent && !app) {
+      return null;
+    }
+
+    // Derive repo from metadata if present; fall back to ArgoCD annotation
+    // (useful during the deleting window when metadata is already gone).
+    let userRepo: string | null = null;
+    if (metadataContent) {
+      const m = metadataContent.match(/repo:\s*ghcr\.io\/[^/]+\/(\S+)/);
+      userRepo = m?.[1] ?? null;
+    }
+    if (!userRepo && app) {
+      const imageList = app.metadata?.annotations?.['argocd-image-updater.argoproj.io/image-list'];
+      const m = imageList?.match(/=ghcr\.io\/([^/]+)\/([^:]+)/);
+      userRepo = m?.[2] ?? null;
+    }
+    if (!userRepo) return null;
+
+    const appName = sanitizeName(userRepo);
     const subdomain = sanitizeName(`${loginLc}-${appName}`, 53);
+    const state: CurrentDeployment['state'] = metadataContent ? 'active' : 'deleting';
+
     return {
       login: loginLc,
-      repo,
-      fullName: `${loginLc}/${repo}`,
+      repo: userRepo,
+      fullName: `${loginLc}/${userRepo}`,
       appName,
       liveUrl: `https://${subdomain}.${this.config.appsDomain}`,
-      syncStatus: app.status?.sync?.status ?? null,
-      healthStatus: app.status?.health?.status ?? null,
+      syncStatus: app?.status?.sync?.status ?? null,
+      healthStatus: app?.status?.health?.status ?? null,
+      state,
     };
+  }
+
+  private async readManifestFile(
+    owner: string,
+    repo: string,
+    path: string
+  ): Promise<string | null> {
+    try {
+      const token = await this.githubApp.getInstallationTokenForRepo(owner, repo);
+      const resp = await axios.get<{ content: string; encoding: string }>(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+          params: { ref: this.config.manifestBranch },
+        }
+      );
+      return Buffer.from(resp.data.content, 'base64').toString('utf8');
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) return null;
+      throw err;
+    }
   }
 
   /** Atomic removal of the user's deploy/users/<login>/ directory in

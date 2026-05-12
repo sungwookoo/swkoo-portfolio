@@ -69,11 +69,12 @@ export interface CurrentDeployment {
   liveUrl: string;
   syncStatus: string | null;
   healthStatus: string | null;
+  state: 'active' | 'deleting';
 }
 
 export const CURRENT_SWR_KEY = `${API_BASE_URL}/deploy/current`;
 
-export function useCurrent(enabled: boolean): {
+export function useCurrent(enabled: boolean, options?: { refreshInterval?: number }): {
   current: CurrentDeployment | null | undefined;
   isLoading: boolean;
   error: Error | undefined;
@@ -81,7 +82,10 @@ export function useCurrent(enabled: boolean): {
   const { data, error, isLoading } = useSWR<CurrentDeployment | null>(
     enabled ? CURRENT_SWR_KEY : null,
     fetcher,
-    { revalidateOnFocus: false }
+    {
+      revalidateOnFocus: false,
+      refreshInterval: options?.refreshInterval,
+    }
   );
   return { current: data, isLoading, error };
 }
