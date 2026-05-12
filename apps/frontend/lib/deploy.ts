@@ -66,6 +66,47 @@ export interface RegisterError {
   message: string;
 }
 
+export type StageStatus = 'pending' | 'running' | 'success' | 'failed';
+
+export interface StageInfo {
+  status: StageStatus;
+  message: string;
+  link?: string;
+}
+
+export interface DeploymentStatus {
+  login: string;
+  repo: string;
+  appName: string;
+  liveUrl: string;
+  stages: {
+    manifests: StageInfo;
+    build: StageInfo;
+    imageDetected: StageInfo;
+    deploy: StageInfo;
+    live: StageInfo;
+  };
+}
+
+export function useDeploymentStatus(
+  login: string | null,
+  repo: string | null
+): {
+  status: DeploymentStatus | undefined;
+  isLoading: boolean;
+  error: Error | undefined;
+} {
+  const key =
+    login && repo
+      ? `${API_BASE_URL}/deploy/status/${encodeURIComponent(login)}/${encodeURIComponent(repo)}`
+      : null;
+  const { data, error, isLoading } = useSWR<DeploymentStatus>(key, fetcher, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+  });
+  return { status: data, isLoading, error };
+}
+
 export async function registerDeploy(fullName: string): Promise<RegisterResponse> {
   const response = await fetch(`${API_BASE_URL}/deploy/register`, {
     method: 'POST',

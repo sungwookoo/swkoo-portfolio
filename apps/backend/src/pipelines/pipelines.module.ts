@@ -11,6 +11,6 @@ import { GitHubClient } from './services/github.client';
   imports: [HttpModule, EventsModule],
   controllers: [PipelinesController],
   providers: [ArgoCdClient, GitHubClient, PipelinesService],
-  exports: [PipelinesService]
+  exports: [PipelinesService, ArgoCdClient]
 })
 export class PipelinesModule {}

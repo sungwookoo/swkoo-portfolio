@@ -5,6 +5,7 @@ import axios from 'axios';
 import { onboardingConfig } from '../config/onboarding.config';
 import { AuthService } from '../onboarding/auth.service';
 import { UsersRepository } from '../onboarding/users.repository';
+import { ArgoCdClient } from '../pipelines/services/argo-cd.client';
 import { GithubAppService } from './github-app.service';
 import {
   renderManifestFiles,
@@ -58,6 +59,37 @@ export interface RegisterResponse {
   manifestRepoCommit: string;
 }
 
+export type StageStatus = 'pending' | 'running' | 'success' | 'failed';
+
+export interface StageInfo {
+  status: StageStatus;
+  message: string;
+  link?: string;
+}
+
+export interface DeploymentStatus {
+  login: string;
+  repo: string;
+  appName: string;
+  liveUrl: string;
+  stages: {
+    manifests: StageInfo;
+    build: StageInfo;
+    imageDetected: StageInfo;
+    deploy: StageInfo;
+    live: StageInfo;
+  };
+}
+
+interface GhaRunSummary {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  html_url: string;
+  head_sha: string;
+  created_at: string;
+}
+
 @Injectable()
 export class DeployService {
   private readonly logger = new Logger(DeployService.name);
@@ -66,6 +98,7 @@ export class DeployService {
     private readonly auth: AuthService,
     private readonly githubApp: GithubAppService,
     private readonly users: UsersRepository,
+    private readonly argo: ArgoCdClient,
     @Inject(onboardingConfig.KEY)
     private readonly config: ConfigType<typeof onboardingConfig>
   ) {}
@@ -272,5 +305,168 @@ export class DeployService {
       userRepoCommit,
       manifestRepoCommit,
     };
+  }
+
+  /** Aggregated status for the progress page. Each stage is computed
+   * independently and probes its own source (GitHub Actions, ArgoCD,
+   * the live URL). Polled by the frontend every few seconds. */
+  async getDeploymentStatus(
+    requestingUserId: number,
+    login: string,
+    repo: string
+  ): Promise<DeploymentStatus> {
+    const loginLc = login.toLowerCase();
+    const appName = sanitizeName(repo);
+    const subdomain = sanitizeName(`${loginLc}-${appName}`, 53);
+    const liveUrl = `https://${subdomain}.${this.config.appsDomain}`;
+
+    const [manifestsStage, buildStage, app, liveStage] = await Promise.all([
+      this.checkManifestStage(loginLc),
+      this.checkBuildStage(requestingUserId, login, repo),
+      this.argo.getApplication(`swkoo-user-${loginLc}`).catch(() => null),
+      this.checkLiveStage(liveUrl),
+    ]);
+
+    const imageDetectedStage = this.checkImageDetectedStage(app);
+    const deployStage = this.checkDeployStage(app);
+
+    return {
+      login: loginLc,
+      repo,
+      appName,
+      liveUrl,
+      stages: {
+        manifests: manifestsStage,
+        build: buildStage,
+        imageDetected: imageDetectedStage,
+        deploy: deployStage,
+        live: liveStage,
+      },
+    };
+  }
+
+  private async checkManifestStage(login: string): Promise<StageInfo> {
+    const [owner, name] = this.config.manifestRepo.split('/');
+    try {
+      const token = await this.githubApp.getInstallationTokenForRepo(owner, name);
+      await axios.get(
+        `https://api.github.com/repos/${owner}/${name}/contents/deploy/users/${login}/metadata.yaml`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+          params: { ref: this.config.manifestBranch },
+        }
+      );
+      return { status: 'success', message: '매니페스트 등록 완료' };
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) {
+        return { status: 'pending', message: '매니페스트 등록 대기 중' };
+      }
+      return { status: 'pending', message: '매니페스트 상태 확인 중' };
+    }
+  }
+
+  private async checkBuildStage(
+    userId: number,
+    owner: string,
+    repo: string
+  ): Promise<StageInfo> {
+    let accessToken: string;
+    try {
+      accessToken = await this.auth.getValidAccessToken(userId);
+    } catch {
+      return { status: 'pending', message: '빌드 상태 확인 권한 없음 (재로그인 필요)' };
+    }
+    try {
+      const resp = await axios.get<{ workflow_runs: GhaRunSummary[] }>(
+        `https://api.github.com/repos/${owner}/${repo}/actions/runs`,
+        {
+          headers: {
+            Authorization: `token ${accessToken}`,
+            Accept: 'application/vnd.github+json',
+          },
+          params: { branch: 'main', per_page: 1 },
+        }
+      );
+      const run = resp.data.workflow_runs[0];
+      if (!run) {
+        return { status: 'pending', message: '빌드 대기 중 (워크플로 실행 기록 없음)' };
+      }
+      if (run.status === 'completed' && run.conclusion === 'success') {
+        return {
+          status: 'success',
+          message: `빌드 완료 (${run.head_sha.slice(0, 7)})`,
+          link: run.html_url,
+        };
+      }
+      if (run.status === 'completed') {
+        return {
+          status: 'failed',
+          message: `빌드 실패: ${run.conclusion ?? 'unknown'}`,
+          link: run.html_url,
+        };
+      }
+      return { status: 'running', message: `이미지 빌드 중 (${run.status})`, link: run.html_url };
+    } catch (err) {
+      this.logger.warn(`checkBuildStage failed: ${(err as Error).message}`);
+      return { status: 'pending', message: '빌드 상태 확인 중' };
+    }
+  }
+
+  private checkImageDetectedStage(app: unknown): StageInfo {
+    const imagesField = (app as {
+      spec?: { source?: { kustomize?: { images?: string[] } } };
+    } | null)?.spec?.source?.kustomize?.images;
+    const images = Array.isArray(imagesField) ? imagesField : [];
+    const pinned = images.find((entry) => entry.includes('@sha256:'));
+    if (pinned) {
+      const digest = pinned.split('@sha256:')[1]?.slice(0, 12);
+      return { status: 'success', message: `새 이미지 감지 (sha256:${digest}…)` };
+    }
+    return { status: 'pending', message: '새 이미지 감지 대기 중' };
+  }
+
+  private checkDeployStage(app: unknown): StageInfo {
+    const a = app as
+      | { status?: { sync?: { status?: string }; health?: { status?: string } } }
+      | null;
+    if (!a) {
+      return { status: 'pending', message: 'ArgoCD Application 감지 대기 중' };
+    }
+    const sync = a.status?.sync?.status;
+    const health = a.status?.health?.status;
+    if (sync === 'Synced' && health === 'Healthy') {
+      return { status: 'success', message: '배포 완료 (Synced / Healthy)' };
+    }
+    if (health === 'Degraded') {
+      return { status: 'failed', message: `배포 실패 (Health=${health})` };
+    }
+    return {
+      status: 'running',
+      message: `배포 진행 중 (Sync=${sync ?? '?'} / Health=${health ?? '?'})`,
+    };
+  }
+
+  private async checkLiveStage(liveUrl: string): Promise<StageInfo> {
+    try {
+      const resp = await axios.get(liveUrl, {
+        timeout: 3000,
+        validateStatus: () => true,
+        maxRedirects: 3,
+      });
+      if (resp.status >= 200 && resp.status < 400) {
+        return { status: 'success', message: `${liveUrl} 응답 정상`, link: liveUrl };
+      }
+      return {
+        status: 'pending',
+        message: `${liveUrl} HTTP ${resp.status}`,
+        link: liveUrl,
+      };
+    } catch {
+      return { status: 'pending', message: '라이브 URL 응답 대기 중', link: liveUrl };
+    }
   }
 }

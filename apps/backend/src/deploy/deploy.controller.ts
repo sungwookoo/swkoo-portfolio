@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Query,
   Req,
@@ -12,6 +13,7 @@ import { IsString, Matches } from 'class-validator';
 
 import { AuthedRequest, JwtAuthGuard } from '../onboarding/jwt-auth.guard';
 import {
+  DeploymentStatus,
   DeployService,
   RegisterResponse,
   RepoSummary,
@@ -55,5 +57,14 @@ export class DeployController {
     @Body() body: RegisterDto
   ): Promise<RegisterResponse> {
     return this.service.registerForUser(req.user.githubLogin, body);
+  }
+
+  @Get('status/:login/:repo')
+  getStatus(
+    @Req() req: AuthedRequest,
+    @Param('login') login: string,
+    @Param('repo') repo: string
+  ): Promise<DeploymentStatus> {
+    return this.service.getDeploymentStatus(req.user.id, login, repo);
   }
 }

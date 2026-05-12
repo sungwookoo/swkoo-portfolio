@@ -7,7 +7,6 @@ import { useSWRConfig } from 'swr';
 import { loginUrl, logout, ME_SWR_KEY, useMe } from '@/lib/auth';
 import {
   registerDeploy,
-  RegisterResponse,
   RepoSummary,
   StackPreview,
   useRepos,
@@ -338,26 +337,23 @@ function PreviewResult({
 type DeployState =
   | { kind: 'idle' }
   | { kind: 'pending' }
-  | { kind: 'success'; result: RegisterResponse }
   | { kind: 'error'; message: string; reason?: string };
 
 function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
+  const router = useRouter();
   const [state, setState] = useState<DeployState>({ kind: 'idle' });
 
   const handleDeploy = async (): Promise<void> => {
     setState({ kind: 'pending' });
     try {
       const result = await registerDeploy(fullName);
-      setState({ kind: 'success', result });
+      const [owner, repo] = result.fullName.split('/');
+      router.push(`/deploy/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
     } catch (err) {
       const e = err as Error & { reason?: string };
       setState({ kind: 'error', message: e.message, reason: e.reason });
     }
   };
-
-  if (state.kind === 'success') {
-    return <DeploySuccess result={state.result} />;
-  }
 
   return (
     <div className="space-y-2 border-t border-slate-800 pt-4">
@@ -379,57 +375,6 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
         Dockerfile + GitHub Actions workflow를 본인 repo에 commit하고, swkoo-portfolio에
         매니페스트를 추가합니다. 한 사용자당 1개 앱만 등록 가능 (v0).
       </p>
-    </div>
-  );
-}
-
-function DeploySuccess({ result }: { result: RegisterResponse }): JSX.Element {
-  const [owner, repo] = result.fullName.split('/');
-  return (
-    <div className="space-y-3 rounded-md border border-emerald-600/40 bg-emerald-500/5 p-4">
-      <p className="text-emerald-400">✓ 배포 시작됨</p>
-      <p className="text-sm text-slate-300">
-        라이브 URL:{' '}
-        <a
-          href={result.liveUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="font-mono text-emerald-300 underline underline-offset-2 hover:text-emerald-200"
-        >
-          {result.liveUrl}
-        </a>
-      </p>
-      <p className="text-xs text-slate-400">
-        빌드 + 첫 배포까지 ~5분 소요. URL이 아직 응답 안 하면 잠시 후 새로고침.
-      </p>
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs text-slate-500">
-        <dt>your repo commit</dt>
-        <dd>
-          <a
-            href={`https://github.com/${result.fullName}/commit/${result.userRepoCommit}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-slate-400 hover:text-slate-200"
-          >
-            {result.userRepoCommit.slice(0, 7)}
-          </a>
-          {' '}
-          (Dockerfile + workflow)
-        </dd>
-        <dt>manifest commit</dt>
-        <dd>
-          <a
-            href={`https://github.com/sungwookoo/swkoo-portfolio/commit/${result.manifestRepoCommit}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-slate-400 hover:text-slate-200"
-          >
-            {result.manifestRepoCommit.slice(0, 7)}
-          </a>
-          {' '}
-          (swkoo-portfolio)
-        </dd>
-      </dl>
     </div>
   );
 }
