@@ -2,6 +2,10 @@
 
 FROM node:24-alpine AS base
 WORKDIR /app
+# Build tools for native modules whose prebuilts don't cover the Node 24 +
+# musl + arm64 combo (notably better-sqlite3). Only kept in the intermediate
+# stages — the final runner is a fresh node:24-alpine.
+RUN apk add --no-cache python3 make g++
 
 FROM base AS deps
 COPY package*.json ./
