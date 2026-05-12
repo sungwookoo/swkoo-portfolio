@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import axios from 'axios';
 import { sign, verify } from 'jsonwebtoken';
@@ -43,7 +43,7 @@ export interface SessionPayload {
 }
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService implements OnApplicationBootstrap {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -52,9 +52,15 @@ export class AuthService implements OnModuleInit {
     private readonly users: UsersRepository
   ) {}
 
-  onModuleInit(): void {
+  onApplicationBootstrap(): void {
     // Boot-time seed: env DEPLOY_ALLOWLIST → DB is_allowed for existing rows.
     // After this, the /admin UI is the source of truth; env stays as bootstrap.
+    //
+    // Must run in onApplicationBootstrap (not onModuleInit): NestJS calls
+    // onModuleInit in provider-registration order rather than dependency
+    // order, so UsersRepository.db may not be initialized yet when
+    // AuthService.onModuleInit fires. onApplicationBootstrap is guaranteed
+    // to run after every onModuleInit has completed.
     const flipped = this.users.seedAllowlist(this.config.deployAllowlist);
     if (flipped > 0) {
       this.logger.log(`Seeded is_allowed=1 for ${flipped} existing user(s) from DEPLOY_ALLOWLIST`);
