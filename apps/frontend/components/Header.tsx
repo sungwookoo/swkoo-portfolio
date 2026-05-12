@@ -53,7 +53,7 @@ export function Header() {
       className={clsx(
         'fixed left-0 right-0 top-0 z-50 transition-all duration-300',
         isScrolled
-          ? 'border-b border-slate-800 bg-slate-950/90 backdrop-blur-md'
+          ? 'border-b border-zinc-900 bg-black/80 backdrop-blur-md'
           : 'bg-transparent'
       )}
     >
@@ -61,7 +61,7 @@ export function Header() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 text-lg font-bold text-slate-100 transition-colors hover:text-emerald-400"
+          className="flex items-center gap-2 text-lg font-bold text-zinc-100 transition-colors hover:text-white"
         >
           <span className="text-xl">🐟</span>
           <span>swkoo.kr</span>
@@ -80,12 +80,12 @@ export function Header() {
                   <Link
                     href={item.href}
                     className={clsx(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      'rounded-md px-3 py-2 text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-slate-800 text-emerald-400'
+                        ? 'bg-zinc-900 text-zinc-50'
                         : item.emphasis
-                          ? 'text-emerald-300/90 hover:bg-emerald-500/10 hover:text-emerald-200'
-                          : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100'
+                          ? 'text-zinc-100 hover:bg-zinc-900 hover:text-white'
+                          : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-100'
                     )}
                   >
                     {item.label}
@@ -96,14 +96,14 @@ export function Header() {
           </ul>
 
           {/* External Links */}
-          <div className="flex items-center gap-2 border-l border-slate-800 pl-4">
+          <div className="flex items-center gap-2 border-l border-zinc-900 pl-4">
             {externalLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800/50 hover:text-slate-100"
+                className="rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-900/50 hover:text-zinc-100"
                 aria-label={link.label}
               >
                 {link.icon}

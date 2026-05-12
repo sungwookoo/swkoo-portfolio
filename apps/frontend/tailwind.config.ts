@@ -19,8 +19,8 @@ const config: Config = {
           muted: '#0ea5e9'
         },
         ink: {
-          DEFAULT: '#0a0a0a',
-          soft: '#111111'
+          DEFAULT: '#000000',
+          soft: '#0a0a0a'
         }
       },
       keyframes: {

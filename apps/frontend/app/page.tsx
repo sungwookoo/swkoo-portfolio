@@ -2,7 +2,14 @@ import Link from 'next/link';
 import clsx from 'clsx';
 
 import { fetchAlerts, fetchPipelines } from '@/lib/api';
-import { builders, hero, liveStatus, steps, trust } from '@/content/landing';
+import {
+  builders,
+  hero,
+  howItWorks,
+  liveStatus,
+  steps,
+  trust,
+} from '@/content/landing';
 
 export default async function Home() {
   const [pipelinesEnvelope, alertsEnvelope] = await Promise.all([
@@ -39,44 +46,29 @@ export default async function Home() {
 
 function Hero(): JSX.Element {
   return (
-    <section className="relative w-full overflow-hidden px-6 pt-20 pb-32 sm:pt-28 sm:pb-40">
-      {/* Asymmetric ambient highlight, off-center to avoid centered "AI hero" look */}
+    <section className="relative w-full overflow-hidden px-6 pt-24 pb-32 sm:pt-32 sm:pb-40">
+      {/* Single subtle top-center radial — Vercel-style atmospherics */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-32 -top-32 -z-10 h-[40rem] w-[40rem] rounded-full bg-emerald-500/[0.07] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-0 top-1/3 -z-10 h-[26rem] w-[26rem] rounded-full bg-amber-400/[0.04] blur-3xl"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.05),transparent_60%)]"
       />
 
       <div className="mx-auto grid w-full max-w-6xl grid-cols-12 gap-y-12 lg:gap-x-8">
         {/* Left: copy */}
-        <div className="col-span-12 flex flex-col items-start gap-7 lg:col-span-8">
-          <span
-            className="animate-fade-in-up inline-flex items-center gap-2 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-emerald-300"
-            style={{ animationDelay: '0ms' }}
-          >
-            <span className="inline-block size-1.5 rounded-full bg-emerald-400" />
-            Phase 2 · Beta
-          </span>
-
-          <h1
-            className="display-tight max-w-3xl whitespace-pre-line text-balance text-left text-5xl font-bold leading-[1.02] text-slate-50 sm:text-6xl lg:text-7xl"
-            style={{ animationDelay: '80ms' }}
-          >
+        <div className="col-span-12 flex flex-col items-start gap-8 lg:col-span-8">
+          <h1 className="display-tight display-gradient max-w-3xl whitespace-pre-line text-balance text-left text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-7xl">
             <AnimatedLines text={hero.title} startDelay={80} step={120} />
           </h1>
 
           <p
-            className="animate-fade-in-up max-w-xl text-balance text-left font-mono text-sm italic text-emerald-300/90 sm:text-base"
+            className="animate-fade-in-up max-w-xl text-balance text-left text-lg leading-relaxed text-zinc-400 sm:text-xl"
             style={{ animationDelay: '380ms' }}
           >
             {hero.tagline}
           </p>
 
           <p
-            className="animate-fade-in-up max-w-xl text-balance text-left text-base leading-relaxed text-slate-400 sm:text-lg"
+            className="animate-fade-in-up max-w-xl text-balance text-left text-base leading-relaxed text-zinc-500"
             style={{ animationDelay: '480ms' }}
           >
             {hero.description}
@@ -88,7 +80,7 @@ function Hero(): JSX.Element {
           >
             <Link
               href={hero.primaryCta.href}
-              className="group inline-flex items-center gap-2 rounded-sm bg-emerald-400 px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-emerald-300/40 transition-all hover:bg-emerald-300 hover:shadow-[0_0_50px_-12px_rgba(16,185,129,0.6)]"
+              className="group inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-zinc-200"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.111.82-.261.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
@@ -98,19 +90,19 @@ function Hero(): JSX.Element {
             </Link>
             <Link
               href={hero.secondaryCta.href}
-              className="group inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-slate-300 transition-colors hover:text-slate-100"
+              className="group inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-100"
             >
-              <span className="border-b border-dashed border-slate-700 pb-0.5 group-hover:border-emerald-400/60">
+              <span className="border-b border-dashed border-zinc-700 pb-0.5 group-hover:border-zinc-500">
                 {hero.secondaryCta.label}
               </span>
-              <span className="text-slate-500 transition-transform group-hover:translate-x-0.5">
+              <span className="text-zinc-500 transition-transform group-hover:translate-x-0.5">
                 →
               </span>
             </Link>
           </div>
         </div>
 
-        {/* Right: spec strip — mono, editorial, offset down */}
+        {/* Right: spec strip — mono terminal mock, offset down */}
         <div
           className="animate-fade-in col-span-12 mt-4 lg:col-span-4 lg:mt-24"
           style={{ animationDelay: '700ms' }}
@@ -149,39 +141,37 @@ function AnimatedLines({
 
 function SpecCard(): JSX.Element {
   return (
-    <div className="overflow-hidden rounded-sm border border-slate-800 bg-slate-950/60 font-mono text-xs leading-relaxed text-slate-400 shadow-[0_0_60px_-30px_rgba(16,185,129,0.4)]">
-      <div className="flex items-center gap-1.5 border-b border-slate-800 px-3 py-2">
-        <span className="size-2 rounded-full bg-slate-700" />
-        <span className="size-2 rounded-full bg-slate-700" />
-        <span className="size-2 rounded-full bg-slate-700" />
-        <span className="ml-2 text-[10px] uppercase tracking-wider text-slate-600">
+    <div className="overflow-hidden rounded-md border border-zinc-900 bg-zinc-950 font-mono text-xs leading-relaxed text-zinc-400">
+      <div className="flex items-center gap-1.5 border-b border-zinc-900 px-3 py-2">
+        <span className="size-2 rounded-full bg-zinc-800" />
+        <span className="size-2 rounded-full bg-zinc-800" />
+        <span className="size-2 rounded-full bg-zinc-800" />
+        <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-600">
           swkoo deploy
         </span>
       </div>
       <pre className="overflow-x-auto whitespace-pre p-4 text-[11px] sm:text-xs">
-        <span className="text-slate-500">$ </span>
-        <span className="text-emerald-300">deploy</span>{' '}
-        <span className="text-slate-300">sungwookoo/your-app</span>
+        <span className="text-zinc-500">$ </span>
+        <span className="text-zinc-100">deploy</span>{' '}
+        <span className="text-zinc-300">sungwookoo/your-app</span>
         {'\n\n'}
         <span className="text-emerald-400">✓</span>{' '}
-        <span className="text-slate-300">Dockerfile generated</span>
+        <span className="text-zinc-300">Dockerfile generated</span>
         {'\n'}
         <span className="text-emerald-400">✓</span>{' '}
-        <span className="text-slate-300">workflow committed</span>
+        <span className="text-zinc-300">workflow committed</span>
         {'\n'}
         <span className="text-emerald-400">✓</span>{' '}
-        <span className="text-slate-300">manifests pushed</span>
+        <span className="text-zinc-300">manifests pushed</span>
         {'\n'}
         <span className="text-amber-400">⟳</span>{' '}
-        <span className="text-slate-300">building on GHA</span>
+        <span className="text-zinc-300">building on GHA</span>
         {'\n'}
-        <span className="text-slate-700">·</span>{' '}
-        <span className="text-slate-600">argocd picking up</span>
+        <span className="text-zinc-700">·</span>{' '}
+        <span className="text-zinc-600">argocd picking up</span>
         {'\n\n'}
-        <span className="text-slate-600">→ </span>
-        <span className="text-emerald-300/90 underline-offset-2">
-          your-app.apps.swkoo.kr
-        </span>
+        <span className="text-zinc-600">→ </span>
+        <span className="text-emerald-300/90">your-app.apps.swkoo.kr</span>
       </pre>
     </div>
   );
@@ -191,40 +181,36 @@ function SpecCard(): JSX.Element {
 
 function HowItWorks(): JSX.Element {
   return (
-    <section className="w-full border-t border-slate-900 px-6 py-24 sm:py-32">
+    <section className="w-full border-t border-zinc-900 px-6 py-24 sm:py-32">
       <div className="mx-auto w-full max-w-6xl">
         <SectionHeader
           eyebrow="How it works"
-          title="세 단계로 라이브"
-          subtitle="등록부터 배포까지 운영자 개입 없이 사용자가 진행합니다."
+          title={howItWorks.title}
+          subtitle={howItWorks.subtitle}
         />
 
         <ol className="mt-16 flex flex-col">
-          {steps.map((step, i) => (
+          {steps.map((step) => (
             <li
               key={step.n}
-              className="grid grid-cols-12 items-baseline gap-y-4 border-t border-slate-900/80 py-10 lg:gap-x-8"
+              className="grid grid-cols-12 items-start gap-y-3 border-t border-zinc-900 py-10 lg:gap-x-8"
             >
               <div className="col-span-12 lg:col-span-3">
-                <span className="display-tight font-mono text-7xl font-semibold text-emerald-400/30 sm:text-8xl">
-                  {String(step.n).padStart(2, '0')}
+                <span className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Step / {String(step.n).padStart(2, '0')}
                 </span>
               </div>
-              <div
-                className={clsx(
-                  'col-span-12 space-y-3 lg:col-span-8',
-                  i === 1 ? 'lg:col-start-5' : 'lg:col-start-4'
-                )}
-              >
-                <h3 className="text-balance text-xl font-semibold text-slate-100 sm:text-2xl">
+              <div className="col-span-12 space-y-3 lg:col-span-8 lg:col-start-4">
+                <h3 className="display-tight text-balance text-2xl font-semibold text-zinc-50 sm:text-3xl">
                   {step.title}
                 </h3>
-                <p className="text-balance text-sm leading-relaxed text-slate-400 sm:text-base">
+                <p className="max-w-2xl text-balance text-base leading-relaxed text-zinc-400">
                   {step.body}
                 </p>
               </div>
             </li>
           ))}
+          <li className="border-t border-zinc-900" />
         </ol>
       </div>
     </section>
@@ -247,7 +233,7 @@ function Transparency({
   allHealthy: boolean;
 }): JSX.Element {
   return (
-    <section className="w-full border-t border-slate-900 bg-slate-950/40 px-6 py-24 sm:py-32">
+    <section className="w-full border-t border-zinc-900 px-6 py-24 sm:py-32">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-12 gap-y-12 lg:gap-x-8">
         <div className="col-span-12 lg:col-span-5">
           <SectionHeader
@@ -259,34 +245,34 @@ function Transparency({
         <div className="col-span-12 flex flex-col justify-center gap-8 lg:col-span-7">
           {showStatus ? (
             <>
-              <div className="flex flex-wrap items-baseline gap-x-10 gap-y-6">
+              <div className="flex flex-wrap items-baseline gap-x-12 gap-y-6">
                 <Metric
                   label={liveStatus.healthyLabel}
                   value={`${healthyCount} / ${totalPipelines}`}
-                  tone={allHealthy ? 'emerald' : 'amber'}
+                  isAlert={!allHealthy}
                 />
                 <Metric
                   label={liveStatus.alertsLabel}
                   value={String(activeAlerts)}
-                  tone={activeAlerts === 0 ? 'emerald' : 'amber'}
+                  isAlert={activeAlerts !== 0}
                 />
               </div>
               <Link
                 href="/observatory"
-                className="group inline-flex w-fit items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-emerald-300 transition-colors hover:text-emerald-200"
+                className="group inline-flex w-fit items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-100"
               >
-                <span className="border-b border-emerald-400/40 pb-0.5">
+                <span className="border-b border-zinc-700 pb-0.5 group-hover:border-zinc-500">
                   Observatory 열기
                 </span>
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </Link>
             </>
           ) : (
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-zinc-500">
               {liveStatus.fetchFailed}
               <Link
                 href="/observatory"
-                className="ml-3 text-emerald-300 hover:text-emerald-200"
+                className="ml-3 text-zinc-300 hover:text-zinc-100"
               >
                 Observatory 열기 →
               </Link>
@@ -301,23 +287,23 @@ function Transparency({
 function Metric({
   label,
   value,
-  tone,
+  isAlert,
 }: {
   label: string;
   value: string;
-  tone: 'emerald' | 'amber';
+  isAlert: boolean;
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-1">
       <span
         className={clsx(
           'display-tight font-mono text-5xl font-semibold sm:text-6xl',
-          tone === 'emerald' ? 'text-emerald-300' : 'text-amber-300'
+          isAlert ? 'text-amber-300' : 'text-zinc-50'
         )}
       >
         {value}
       </span>
-      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
         {label}
       </span>
     </div>
@@ -328,7 +314,7 @@ function Metric({
 
 function UnderTheHood(): JSX.Element {
   return (
-    <section className="w-full border-t border-slate-900 px-6 py-24 sm:py-32">
+    <section className="w-full border-t border-zinc-900 px-6 py-24 sm:py-32">
       <div className="mx-auto w-full max-w-6xl">
         <SectionHeader
           eyebrow="Under the hood"
@@ -336,17 +322,17 @@ function UnderTheHood(): JSX.Element {
           subtitle={builders.description}
         />
 
-        <ul className="mt-12 grid grid-cols-1 divide-y divide-slate-900 border-t border-slate-900 sm:grid-cols-2 sm:divide-y-0 sm:divide-x">
+        <ul className="mt-12 grid grid-cols-1 divide-y divide-zinc-900 border-t border-zinc-900 sm:grid-cols-2 sm:divide-y-0 sm:divide-x">
           {builders.bullets.map((item, i) => (
             <li
               key={item}
               className={clsx(
-                'flex items-start gap-3 px-0 py-4 text-sm text-slate-300 sm:px-6',
+                'flex items-start gap-3 px-0 py-4 text-sm text-zinc-300 sm:px-6',
                 i === 0 && 'sm:pl-0',
-                i === builders.bullets.length - 1 && 'sm:border-b sm:border-slate-900'
+                i === builders.bullets.length - 1 && 'sm:border-b sm:border-zinc-900'
               )}
             >
-              <span className="mt-1 inline-block size-1.5 shrink-0 rounded-full bg-emerald-400/60" />
+              <span className="mt-1 inline-block size-1.5 shrink-0 rounded-full bg-zinc-500" />
               <span className="leading-relaxed">{item}</span>
             </li>
           ))}
@@ -383,12 +369,12 @@ function DocLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="group inline-flex items-center gap-1 text-slate-500 transition-colors hover:text-emerald-300"
+      className="group inline-flex items-center gap-1 text-zinc-500 transition-colors hover:text-zinc-100"
     >
-      <span className="border-b border-dashed border-slate-800 pb-0.5 group-hover:border-emerald-400/60">
+      <span className="border-b border-dashed border-zinc-800 pb-0.5 group-hover:border-zinc-500">
         {children}
       </span>
-      <span className="text-slate-700 transition-transform group-hover:translate-x-0.5">↗</span>
+      <span className="text-zinc-700 transition-transform group-hover:translate-x-0.5">↗</span>
     </a>
   );
 }
@@ -406,13 +392,13 @@ function SectionHeader({
 }): JSX.Element {
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-emerald-400/80">
+      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
         {eyebrow}
       </p>
-      <h2 className="display-tight text-balance text-3xl font-semibold leading-[1.05] text-slate-50 sm:text-4xl lg:text-5xl">
+      <h2 className="display-tight display-gradient text-balance text-3xl font-semibold leading-[1.05] sm:text-4xl lg:text-5xl">
         {title}
       </h2>
-      <p className="text-balance text-base leading-relaxed text-slate-400">{subtitle}</p>
+      <p className="text-balance text-base leading-relaxed text-zinc-400">{subtitle}</p>
     </div>
   );
 }

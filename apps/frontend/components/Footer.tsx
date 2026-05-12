@@ -58,7 +58,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
+                    className="text-sm text-slate-400 transition-colors hover:text-zinc-100"
                   >
                     {link.label}
                   </Link>
@@ -70,7 +70,7 @@ export function Footer() {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
+                    className="text-sm text-slate-400 transition-colors hover:text-zinc-100"
                   >
                     {link.label} ↗
                   </a>
@@ -91,7 +91,7 @@ export function Footer() {
                     href={link.href}
                     target={link.href.startsWith('mailto:') ? undefined : '_blank'}
                     rel={link.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-                    className="text-sm text-slate-400 transition-colors hover:text-emerald-400"
+                    className="text-sm text-slate-400 transition-colors hover:text-zinc-100"
                   >
                     {link.label}
                   </a>

@@ -20,9 +20,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'swkoo.kr — GitHub repo 하나로 앱을 라이브로',
+  title: 'swkoo.kr — GitHub repo가 라이브 앱이 됩니다',
   description:
-    'GitHub repo 하나만 있으면 Dockerfile부터 k8s 매니페스트까지 자동 생성, ArgoCD로 배포합니다. 그 인프라는 운영 콘솔(Observatory)에서 모두 공개. 친구·테스터 한정 베타.'
+    'GitHub에 연결하면 Dockerfile부터 Kubernetes 매니페스트까지 자동으로 생성·commit되고, ArgoCD가 배포합니다. 사용한 인프라는 운영 콘솔(Observatory)에서 그대로 공개됩니다.'
 };
 
 export default function RootLayout({

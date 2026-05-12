@@ -48,7 +48,7 @@ export function DeployPageClient(): JSX.Element {
           <p className="text-slate-400">
             GitHub repo만 있으면 swkoo.kr 인프라에 자동 배포합니다.
             <br />
-            Next.js / Node 앱 지원 (베타).
+            Next.js / Node 앱을 지원합니다.
           </p>
           {oauthError && (
             <p className="text-sm text-amber-400">로그인 실패. 다시 시도해주세요.</p>
@@ -95,9 +95,9 @@ export function DeployPageClient(): JSX.Element {
       <Shell narrow>
         <div className="max-w-md space-y-6 text-center">
           <ProfileBadge me={me} />
-          <h1 className="text-2xl font-semibold text-slate-100">베타 액세스 대기 중</h1>
+          <h1 className="text-2xl font-semibold text-slate-100">액세스 권한이 필요합니다</h1>
           <p className="text-slate-400">
-            현재 친구·테스터 한정 베타입니다. 액세스 요청은 운영자에게 직접 문의해주세요.
+            이 페이지는 등록된 사용자만 사용할 수 있습니다. 액세스 요청은 운영자에게 문의해주세요.
           </p>
           <button
             type="button"
@@ -122,7 +122,7 @@ export function DeployPageClient(): JSX.Element {
             )}
             <div>
               <p className="text-sm text-slate-300">@{me.githubLogin}</p>
-              <p className="text-xs text-slate-500">베타 액세스 확인됨</p>
+              <p className="text-xs text-slate-500">액세스 확인됨</p>
             </div>
           </div>
           <button
