@@ -28,12 +28,15 @@
     --from-literal=ARGOCD_AUTH_TOKEN=<jwt-token> \
     --from-literal=JWT_SECRET=<random-32+-bytes> \
     --from-literal=GITHUB_APP_ID=<app-id> \
+    --from-literal=GITHUB_APP_SLUG=<app-slug> \
     --from-literal=GITHUB_APP_CLIENT_ID=<client-id> \
     --from-literal=GITHUB_APP_CLIENT_SECRET=<client-secret> \
     --from-literal=GITHUB_APP_PRIVATE_KEY="$(cat private-key.pem)" \
     --from-literal=DEPLOY_ALLOWLIST=sungwookoo \
     --from-literal=ADMIN_LOGINS=sungwookoo
   ```
+
+  `GITHUB_APP_SLUG`은 App의 URL-safe 이름 (예: `swkoo-deploy`). https://github.com/apps/&lt;slug&gt;/installations/new 형태의 install URL 만들 때 사용.
 
   필요 시 키:
   - `ARGOCD_USERNAME` / `ARGOCD_PASSWORD` — `ARGOCD_AUTH_TOKEN` 대체
@@ -54,6 +57,14 @@
   `kubectl create secret ... --dry-run=client -o yaml | kubectl apply -f -` 패턴은 *전체 교체*라 누락된 키가 삭제됨 — 매번 모든 키를 명시할 자신이 없으면 위의 `patch --type=merge`만 사용.
 
 > **운영 메모**: `DEPLOY_ALLOWLIST`는 Phase 2.7 (관리자 페이지) 이후 *초기 시드 전용*으로 남고, 실제 권한 체크는 `users.is_allowed` DB 컬럼에서 함. 친구 추가·제거는 `/admin`에서 토글. `ADMIN_LOGINS`는 그대로 env 단일 source.
+
+> **GitHub App 설정 — Connect 통합 플로우 동작을 위해 필수**:
+> - **Request user authorization (OAuth) during installation**: ✅ ON. 이 토글이 켜져 있으면 install URL 한 번으로 install + OAuth가 한 흐름으로 묶이고, GitHub이 *OAuth callback URL* 쪽으로 `code`+`state`+`installation_id`+`setup_action`을 함께 보냅니다. 이 모드에서는 Setup URL 필드가 GitHub UI에서 비활성화되므로 별도 입력 불필요.
+> - **User authorization callback URL**: `https://swkoo.kr/api/auth/github/callback`
+> - **Webhook URL** (선택): 사용 안 함
+> - **Permissions**: Repository → Contents (write), Metadata (read), Actions (read). Account → Email (read)
+>
+> 위 토글이 OFF면 사용자가 install URL 클릭 시 App만 설치되고 OAuth code 없이 Setup URL로 빠져서 사인인이 안 됩니다.
 
 > **주의:** OAuth 토큰/비밀번호 등 민감 정보는 Git에 커밋하지 말고 Kubernetes Secret 또는 외부 시크릿 매니저를 사용하세요.
 

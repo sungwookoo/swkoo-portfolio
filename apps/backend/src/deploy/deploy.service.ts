@@ -263,7 +263,10 @@ export class DeployService {
       if (msg.startsWith('INSTALLATION_NOT_FOUND')) {
         throw new ForbiddenException({
           reason: 'APP_NOT_INSTALLED_ON_USER_REPO',
-          message: `swkoo-deploy GitHub App이 ${owner}/${repo} 에 설치되어 있지 않습니다. https://github.com/apps/swkoo-deploy/installations/new 에서 설치하고 다시 시도해주세요.`,
+          message: `${owner}/${repo} 에 swkoo.kr GitHub App이 설치되어 있지 않습니다. 해당 repo에 App을 추가하고 다시 시도해주세요.`,
+          installUrl: this.config.githubAppSlug
+            ? `https://github.com/apps/${this.config.githubAppSlug}/installations/new`
+            : undefined,
         });
       }
       throw err;

@@ -120,6 +120,7 @@ export async function deleteCurrentDeployment(): Promise<{ commit: string }> {
 export interface RegisterError {
   reason: string;
   message: string;
+  installUrl?: string;
 }
 
 export type StageStatus = 'pending' | 'running' | 'success' | 'failed';
@@ -179,8 +180,12 @@ export async function registerDeploy(fullName: string): Promise<RegisterResponse
     }
     const detail = payload.message;
     if (detail && typeof detail === 'object' && 'reason' in detail) {
-      const err = new Error(detail.message ?? detail.reason) as Error & { reason?: string };
+      const err = new Error(detail.message ?? detail.reason) as Error & {
+        reason?: string;
+        installUrl?: string;
+      };
       err.reason = detail.reason;
+      err.installUrl = detail.installUrl;
       throw err;
     }
     throw new Error(

@@ -2,6 +2,10 @@ import { registerAs } from '@nestjs/config';
 
 export interface OnboardingConfig {
   githubAppId: string | undefined;
+  // URL-safe app slug, used to build the install URL
+  // (https://github.com/apps/<slug>/installations/new). Distinct from the
+  // numeric appId.
+  githubAppSlug: string | undefined;
   githubAppClientId: string | undefined;
   githubAppClientSecret: string | undefined;
   githubAppPrivateKey: string | undefined;
@@ -28,6 +32,7 @@ export const onboardingConfig = registerAs(
   'onboarding',
   (): OnboardingConfig => ({
     githubAppId: process.env.GITHUB_APP_ID,
+    githubAppSlug: process.env.GITHUB_APP_SLUG,
     githubAppClientId: process.env.GITHUB_APP_CLIENT_ID,
     githubAppClientSecret: process.env.GITHUB_APP_CLIENT_SECRET,
     githubAppPrivateKey: process.env.GITHUB_APP_PRIVATE_KEY,

@@ -60,8 +60,11 @@ export function DeployPageClient(): JSX.Element {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d={GITHUB_ICON_PATH} />
             </svg>
-            Sign in with GitHub
+            Connect GitHub
           </a>
+          <p className="text-xs text-slate-500">
+            클릭 시 GitHub에서 본인 인증 + 사용할 repo에 App 설치를 함께 진행합니다.
+          </p>
         </div>
       </Shell>
     );
@@ -83,7 +86,7 @@ export function DeployPageClient(): JSX.Element {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d={GITHUB_ICON_PATH} />
             </svg>
-            Sign in again
+            Reconnect GitHub
           </a>
         </div>
       </Shell>
@@ -412,7 +415,7 @@ function PreviewResult({
 type DeployState =
   | { kind: 'idle' }
   | { kind: 'pending' }
-  | { kind: 'error'; message: string; reason?: string };
+  | { kind: 'error'; message: string; reason?: string; installUrl?: string };
 
 function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
   const router = useRouter();
@@ -425,18 +428,35 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
       const [owner, repo] = result.fullName.split('/');
       router.push(`/deploy/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
     } catch (err) {
-      const e = err as Error & { reason?: string };
-      setState({ kind: 'error', message: e.message, reason: e.reason });
+      const e = err as Error & { reason?: string; installUrl?: string };
+      setState({
+        kind: 'error',
+        message: e.message,
+        reason: e.reason,
+        installUrl: e.installUrl,
+      });
     }
   };
 
   return (
     <div className="space-y-2 border-t border-slate-800 pt-4">
       {state.kind === 'error' && (
-        <p className="text-sm text-amber-400">
-          {state.reason && <span className="font-mono text-xs">[{state.reason}] </span>}
-          {state.message}
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-amber-400">
+            {state.reason && <span className="font-mono text-xs">[{state.reason}] </span>}
+            {state.message}
+          </p>
+          {state.installUrl && (
+            <a
+              href={state.installUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/50"
+            >
+              이 repo에 App 설치하기 ↗
+            </a>
+          )}
+        </div>
       )}
       <button
         type="button"

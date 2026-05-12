@@ -71,16 +71,19 @@ export class AuthService implements OnApplicationBootstrap {
     return randomBytes(16).toString('hex');
   }
 
+  /**
+   * Builds the GitHub App install URL with a CSRF state. Because the App has
+   * "Request user authorization (OAuth) during installation" enabled, GitHub
+   * combines install + OAuth into a single user-facing flow and redirects
+   * back to the Setup URL (= our /auth/github/callback) with both
+   * `installation_id` and `code` + `state` in the query.
+   */
   buildAuthorizeUrl(state: string): string {
-    if (!this.config.githubAppClientId) {
-      throw new Error('GITHUB_APP_CLIENT_ID not configured');
+    if (!this.config.githubAppSlug) {
+      throw new Error('GITHUB_APP_SLUG not configured');
     }
-    const params = new URLSearchParams({
-      client_id: this.config.githubAppClientId,
-      redirect_uri: `${this.config.appBaseUrl}/api/auth/github/callback`,
-      state,
-    });
-    return `https://github.com/login/oauth/authorize?${params.toString()}`;
+    const params = new URLSearchParams({ state });
+    return `https://github.com/apps/${this.config.githubAppSlug}/installations/new?${params.toString()}`;
   }
 
   async exchangeCodeForUser(code: string): Promise<UserRow> {

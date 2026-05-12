@@ -56,7 +56,17 @@ export class AuthController {
   async handleCallback(@Req() req: Request, @Res() res: Response): Promise<void> {
     const code = typeof req.query.code === 'string' ? req.query.code : undefined;
     const state = typeof req.query.state === 'string' ? req.query.state : undefined;
+    const setupAction =
+      typeof req.query.setup_action === 'string' ? req.query.setup_action : undefined;
     const expectedState = readCookie(req, OAUTH_STATE_COOKIE);
+
+    // Setup callback fired without an OAuth code — usually means the user is
+    // already signed in and just adjusted their installation's repo selection
+    // from GitHub directly. Nothing to exchange; bounce them to /deploy.
+    if (!code && setupAction) {
+      res.redirect(`${this.config.appBaseUrl}/deploy`);
+      return;
+    }
 
     if (!code || !state) {
       throw new BadRequestException('missing code or state');
