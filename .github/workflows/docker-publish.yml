@@ -22,7 +22,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -45,7 +45,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: docker/setup-buildx-action@v3
 
@@ -62,7 +62,7 @@ jobs:
 
       # B. build-push-action with GHA cache, scope=backend so caches don't evict each other.
       # ignore-error=true keeps transient GHA cache 5xx from killing successful builds.
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: apps/backend
           file: apps/backend/Dockerfile
@@ -84,7 +84,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: docker/setup-buildx-action@v3
 
@@ -99,7 +99,7 @@ jobs:
           fi
           echo "$OCI_AUTH_TOKEN" | docker login "${REGISTRY_HOST}" --username "$OCI_USERNAME" --password-stdin
 
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: apps/frontend
           file: apps/frontend/Dockerfile
@@ -121,7 +121,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # If the build job ran and succeeded, always update the tag — regardless of
       # whether the trigger was a path-matching push or a manual workflow_dispatch.
