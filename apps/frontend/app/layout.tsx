@@ -1,7 +1,23 @@
 import type { Metadata } from 'next';
+import { IBM_Plex_Sans_KR, JetBrains_Mono } from 'next/font/google';
+
 import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+
+const sans = IBM_Plex_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
+  display: 'swap'
+});
+
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-mono',
+  display: 'swap'
+});
 
 export const metadata: Metadata = {
   title: 'swkoo.kr — GitHub repo 하나로 앱을 라이브로',
@@ -15,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className="flex min-h-screen flex-col bg-slate-950 text-slate-100 antialiased">
+    <html lang="ko" className={`${sans.variable} ${mono.variable}`}>
+      <body className="flex min-h-screen flex-col bg-ink text-slate-100 antialiased">
         <Header />
         <div className="flex-1 pt-16">{children}</div>
         <Footer />
