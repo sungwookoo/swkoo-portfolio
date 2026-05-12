@@ -196,28 +196,27 @@ export class DeployService {
    * directory atomically (orphan files in old app subdirs are deleted in the
    * same commit). Phase 1 caps one app per user. */
   async registerForUser(userLogin: string, req: RegisterRequest): Promise<RegisterResponse> {
-    // GitHub logins preserve case; allowlist and k8s naming need lowercase.
+    // GitHub logins preserve case; k8s naming needs lowercase.
     const loginLc = userLogin.toLowerCase();
-    const allowlistLc = this.config.deployAllowlist.map((s) => s.toLowerCase());
-    if (!allowlistLc.includes(loginLc)) {
+
+    const user = this.users.findByLogin(userLogin);
+    if (!user) {
+      throw new ForbiddenException({ reason: 'NO_USER', message: 'user record missing' });
+    }
+    if (!user.isAllowed) {
       this.users.audit({
         actor: userLogin,
         action: 'ACCESS_DENIED',
         target: req.fullName,
-        reason: 'BETA_ALLOWLIST',
+        reason: 'NOT_ALLOWED',
         metaJson: null,
       });
-      throw new ForbiddenException({ reason: 'BETA_ALLOWLIST', message: '베타 액세스 권한이 없습니다.' });
+      throw new ForbiddenException({ reason: 'NOT_ALLOWED', message: '액세스 권한이 없습니다.' });
     }
 
     const [owner, repo] = req.fullName.split('/');
     if (!owner || !repo) {
       throw new ForbiddenException({ reason: 'INVALID_REPO', message: 'invalid fullName' });
-    }
-
-    const user = this.users.findByLogin(userLogin);
-    if (!user) {
-      throw new ForbiddenException({ reason: 'NO_USER', message: 'user record missing' });
     }
 
     // Re-detect stack to make sure preview wasn't stale.
@@ -405,9 +404,9 @@ export class DeployService {
    * user's source repo (Dockerfile + workflow + GHCR images) is untouched. */
   async deleteDeployment(userLogin: string): Promise<{ commit: string }> {
     const loginLc = userLogin.toLowerCase();
-    const allowlistLc = this.config.deployAllowlist.map((s) => s.toLowerCase());
-    if (!allowlistLc.includes(loginLc)) {
-      throw new ForbiddenException({ reason: 'BETA_ALLOWLIST', message: '베타 액세스 권한이 없습니다.' });
+    const user = this.users.findByLogin(userLogin);
+    if (!user || !user.isAllowed) {
+      throw new ForbiddenException({ reason: 'NOT_ALLOWED', message: '액세스 권한이 없습니다.' });
     }
     const [owner, repo] = this.config.manifestRepo.split('/');
     let commit: string;

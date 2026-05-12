@@ -8,9 +8,13 @@ export interface OnboardingConfig {
   jwtSecret: string | undefined;
   appBaseUrl: string;
   brandName: string;
-  // CSV of github logins allowed to call POST /api/deploy/register.
-  // Empty list = nobody can deploy (everyone can still sign in for waitlist).
+  // CSV of github logins seeded into users.is_allowed on boot (Phase 2.7+).
+  // Empty list = no auto-seed; everyone signs in but nobody passes the deploy
+  // gate until granted via /admin.
   deployAllowlist: string[];
+  // CSV of github logins authorized for /admin/* routes. Always env-managed
+  // (no DB or UI flow to elevate admin). Empty = nobody is admin.
+  adminLogins: string[];
   // Where /api/deploy/register commits the rendered manifests.
   manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
   manifestBranch: string;
@@ -28,6 +32,10 @@ export const onboardingConfig = registerAs(
     appBaseUrl: process.env.APP_BASE_URL ?? 'https://swkoo.kr',
     brandName: process.env.BRAND_NAME ?? 'swkoo.kr',
     deployAllowlist: (process.env.DEPLOY_ALLOWLIST ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    adminLogins: (process.env.ADMIN_LOGINS ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),

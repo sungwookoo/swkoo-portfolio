@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 
 import { onboardingConfig } from '../config/onboarding.config';
 import { webhooksConfig } from '../config/webhooks.config';
+import { AdminController } from './admin.controller';
+import { AdminGuard } from './admin.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -13,8 +15,8 @@ import { UsersRepository } from './users.repository';
     ConfigModule.forFeature(onboardingConfig),
     ConfigModule.forFeature(webhooksConfig),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, UsersRepository, JwtAuthGuard],
-  exports: [AuthService, UsersRepository, JwtAuthGuard],
+  controllers: [AuthController, AdminController],
+  providers: [AuthService, UsersRepository, JwtAuthGuard, AdminGuard],
+  exports: [AuthService, UsersRepository, JwtAuthGuard, AdminGuard],
 })
 export class OnboardingModule {}

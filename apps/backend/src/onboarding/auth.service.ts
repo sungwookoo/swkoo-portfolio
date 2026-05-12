@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import axios from 'axios';
 import { sign, verify } from 'jsonwebtoken';
@@ -43,7 +43,7 @@ export interface SessionPayload {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -51,6 +51,15 @@ export class AuthService {
     private readonly config: ConfigType<typeof onboardingConfig>,
     private readonly users: UsersRepository
   ) {}
+
+  onModuleInit(): void {
+    // Boot-time seed: env DEPLOY_ALLOWLIST → DB is_allowed for existing rows.
+    // After this, the /admin UI is the source of truth; env stays as bootstrap.
+    const flipped = this.users.seedAllowlist(this.config.deployAllowlist);
+    if (flipped > 0) {
+      this.logger.log(`Seeded is_allowed=1 for ${flipped} existing user(s) from DEPLOY_ALLOWLIST`);
+    }
+  }
 
   generateOauthState(): string {
     return randomBytes(16).toString('hex');
@@ -111,6 +120,16 @@ export class AuthService {
       email: primaryEmail,
       avatarUrl: gh.avatar_url,
     });
+
+    // Lazy seed for users not yet in DB at boot time but listed in env.
+    if (!user.isAllowed) {
+      const lc = user.githubLogin.toLowerCase();
+      const envAllowed = this.config.deployAllowlist.some((l) => l.toLowerCase() === lc);
+      if (envAllowed) {
+        this.users.setAllowed(user.githubLogin, true);
+        user.isAllowed = true;
+      }
+    }
 
     this.users.saveTokens(user.id, {
       accessToken,

@@ -120,13 +120,13 @@ actor=<github_login> action=DEPLOY|DELETE|ACCESS_REQUEST repo=<x> at=<ts>
 
 Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 
-- [ ] **GitHub App** (OAuth App 아님)
-- [ ] **사용자 record DB**: OAuth 통과한 모든 사용자 기록 (allowlist 통과 전부터). waitlist/티어 자료
-- [ ] **백엔드 git author** 명시 분리
-- [ ] **manifest 경로 함수 추상화** (`getUserManifestPath(login)`)
-- [ ] **사용자 액션 이벤트 로그**
-- [ ] **에러 응답 `reason` 코드** (`BETA_ALLOWLIST`, `STACK_UNSUPPORTED`, `QUOTA_EXCEEDED` 등)
-- [ ] **`BRAND_NAME` 환경변수** (페이지 표시용)
+- [x] **GitHub App** (OAuth App 아님) — `github-app.service.ts` (JWT RS256 + installation token)
+- [x] **사용자 record DB**: OAuth 통과한 모든 사용자 기록 (allowlist 통과 전부터) — `users` 테이블 (Phase 2.7부터 `is_allowed` 컬럼 추가, env는 시드 전용)
+- [x] **백엔드 git author** 명시 분리 — `swkoo.kr deploy bot <bot@swkoo.kr>` (`github-app.service.ts:39`)
+- [ ] **manifest 경로 함수 추상화** (`getUserManifestPath(login)`) — 현재 `deploy/users/${loginLc}` 다섯 군데에서 hardcoded. 차후 per-tenant repo 분리 시 한 곳만 수정하도록 추출
+- [x] **사용자 액션 이벤트 로그** — `audit_log` 테이블 + `users.audit()` (deploy.service / auth.service 7 곳에서 기록)
+- [x] **에러 응답 `reason` 코드** — `BETA_ALLOWLIST`, `STACK_UNSUPPORTED`, `NO_USER`, `INVALID_REPO`, `APP_NOT_INSTALLED_*`, `NO_EXISTING_DEPLOYMENT`. Phase 2.7에서 `BETA_ALLOWLIST` → `NOT_ALLOWED` 으로 이름 변경
+- [x] **`BRAND_NAME` 환경변수** — `onboarding.config.ts:29`, `/me` 응답에 포함
 - [ ] **T&C / Privacy Policy 페이지 자리** — 빈 페이지라도 OAuth 동의 직후 노출
 - [ ] **이미지 스캔 자리 확보**: `imageScanResult` 필드를 metadata.yaml에 미리 두고 webhook 구멍만 비워둠
 - [ ] **`writeBackMethod` 필드 자리** (현재 `argocd`, 차후 `git`)

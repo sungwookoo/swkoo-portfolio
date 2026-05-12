@@ -23,6 +23,7 @@ export interface UserRow {
   avatarUrl: string | null;
   createdAt: string;
   lastLoginAt: string;
+  isAllowed: boolean;
 }
 
 export interface TokenSet {
@@ -85,6 +86,10 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     this.addColumnIfMissing('users', 'access_token', 'TEXT');
     this.addColumnIfMissing('users', 'refresh_token', 'TEXT');
     this.addColumnIfMissing('users', 'token_expires_at', 'TEXT');
+    // Phase 2.7: allowlist moved from env (DEPLOY_ALLOWLIST) to DB column.
+    // Env still seeds initial state on boot via seedAllowlist(); after that
+    // the /admin UI is the source of truth.
+    this.addColumnIfMissing('users', 'is_allowed', 'INTEGER NOT NULL DEFAULT 0');
     this.logger.log('users + audit_log tables ready');
   }
 
@@ -100,6 +105,18 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     this.db?.close();
   }
 
+  private readonly userColumns = `
+    id, github_id AS githubId, github_login AS githubLogin,
+    name, email, avatar_url AS avatarUrl,
+    created_at AS createdAt, last_login_at AS lastLoginAt,
+    CASE WHEN is_allowed = 1 THEN 1 ELSE 0 END AS isAllowed
+  `;
+
+  private hydrate(row: unknown): UserRow {
+    const r = row as UserRow & { isAllowed: number | boolean };
+    return { ...r, isAllowed: Boolean(r.isAllowed) };
+  }
+
   upsertUser(u: UserUpsert): UserRow {
     const stmt = this.db.prepare(`
       INSERT INTO users (github_id, github_login, name, email, avatar_url)
@@ -110,31 +127,63 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
         email = excluded.email,
         avatar_url = excluded.avatar_url,
         last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-      RETURNING id, github_id AS githubId, github_login AS githubLogin,
-                name, email, avatar_url AS avatarUrl,
-                created_at AS createdAt, last_login_at AS lastLoginAt
+      RETURNING ${this.userColumns}
     `);
-    return stmt.get(u) as UserRow;
+    return this.hydrate(stmt.get(u));
   }
 
   findById(id: number): UserRow | undefined {
     const stmt = this.db.prepare(`
-      SELECT id, github_id AS githubId, github_login AS githubLogin,
-             name, email, avatar_url AS avatarUrl,
-             created_at AS createdAt, last_login_at AS lastLoginAt
+      SELECT ${this.userColumns}
       FROM users WHERE id = ?
     `);
-    return stmt.get(id) as UserRow | undefined;
+    const row = stmt.get(id);
+    return row ? this.hydrate(row) : undefined;
   }
 
   findByLogin(login: string): UserRow | undefined {
     const stmt = this.db.prepare(`
-      SELECT id, github_id AS githubId, github_login AS githubLogin,
-             name, email, avatar_url AS avatarUrl,
-             created_at AS createdAt, last_login_at AS lastLoginAt
+      SELECT ${this.userColumns}
       FROM users WHERE github_login = ?
     `);
-    return stmt.get(login) as UserRow | undefined;
+    const row = stmt.get(login);
+    return row ? this.hydrate(row) : undefined;
+  }
+
+  listAllUsers(): UserRow[] {
+    const stmt = this.db.prepare(`
+      SELECT ${this.userColumns}
+      FROM users
+      ORDER BY last_login_at DESC
+    `);
+    return stmt.all().map((row) => this.hydrate(row));
+  }
+
+  /** Returns true if a user row exists for the login. The /admin UI surfaces
+   *  the "not in DB" case (env-listed login that never signed in) as a hint. */
+  setAllowed(login: string, isAllowed: boolean): boolean {
+    // Case-insensitive match — GitHub treats usernames case-insensitively
+    // in URLs, and stored casing reflects whatever GH last sent on login.
+    const result = this.db
+      .prepare(`UPDATE users SET is_allowed = ? WHERE LOWER(github_login) = ?`)
+      .run(isAllowed ? 1 : 0, login.toLowerCase());
+    return result.changes > 0;
+  }
+
+  /** One-way seed from DEPLOY_ALLOWLIST env → DB on every boot. Only flips
+   *  is_allowed 0 → 1 for existing rows; never inserts. Users not yet in DB
+   *  get the same flip on their first sign-in via AuthService. */
+  seedAllowlist(logins: string[]): number {
+    if (logins.length === 0) return 0;
+    const placeholders = logins.map(() => '?').join(',');
+    const result = this.db
+      .prepare(
+        `UPDATE users SET is_allowed = 1
+         WHERE is_allowed = 0
+           AND LOWER(github_login) IN (${placeholders})`
+      )
+      .run(...logins.map((l) => l.toLowerCase()));
+    return result.changes;
   }
 
   audit(entry: AuditLogInsert): void {

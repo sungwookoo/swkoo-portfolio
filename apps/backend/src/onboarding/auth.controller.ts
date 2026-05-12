@@ -98,17 +98,20 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    const isAllowed = this.config.deployAllowlist.includes(user.githubLogin);
     // requiresReauth = user signed in before token storage existed, or refresh
     // chain broke. Frontend should prompt them to sign in again.
     const requiresReauth = this.users.getTokens(user.id) === null;
+    const isAdmin = this.config.adminLogins
+      .map((l) => l.toLowerCase())
+      .includes(user.githubLogin.toLowerCase());
     return {
       id: user.id,
       githubLogin: user.githubLogin,
       name: user.name,
       email: user.email,
       avatarUrl: user.avatarUrl,
-      isAllowed,
+      isAllowed: user.isAllowed,
+      isAdmin,
       requiresReauth,
       brandName: this.config.brandName,
     };

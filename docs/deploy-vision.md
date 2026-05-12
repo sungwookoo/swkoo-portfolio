@@ -93,6 +93,13 @@
 | 1.5 | 사용자 GitHub Actions 빌드 템플릿 + onboarding 가이드 | ✅ | `docs/templates/friend-build-workflow.yml`, `docs/onboarding-friend.md` |
 | 1.5b | 친구 push 후 자동 sync trigger | ✅ | argocd-image-updater (digest 전략 + argocd write-back) — 수동 rollout 불필요 |
 | 1.6 | 친구 1명 실제 등록 + 검증 | ✅ (self-test) | sungwookoo 본인으로 검증, `sungwookoo-nextjs-sample.apps.swkoo.kr` 라이브 |
+| 2.1 | GitHub App OAuth 셀프 등록 (Sign in with GitHub) | ✅ | `/deploy` 진입 → GitHub OAuth → JWT 쿠키 세션 |
+| 2.2 | repo 목록 + 스택 자동 감지 | ✅ | `package.json` → Next.js 식별, 포트·이미지 경로·서브도메인 자동 결정 |
+| 2.3 | 사용자 repo 자동 commit (Dockerfile + GHA workflow) | ✅ | `github-app.service.ts` atomic blobs/trees/commits/refs |
+| 2.4 | 매니페스트 자동 commit (`deploy/users/<login>/`) | ✅ | namespace + quota + limit-range + netpol + kustomization + metadata + deployment/service/ingress |
+| 2.5 | 진행도 페이지 (5-stage checklist) | ✅ | `/deploy/[login]/[repo]` |
+| 2.6 | unregister 플로우 (배너 + 상세 페이지 카드) | ✅ | `DELETE /deploy` → 매니페스트 제거, ArgoCD prune, banner는 metadata.yaml/Application 상태 둘 다 추적 |
+| 2.7 | 관리자 페이지 v0 (allowlist DB 이관 + `/admin` UI) | 진행 중 | `ADMIN_LOGINS` env로 게이팅, `users.is_allowed` 토글, audit_log 기록 |
 
 ---
 
