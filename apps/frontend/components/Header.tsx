@@ -7,6 +7,7 @@ import clsx from 'clsx';
 
 const navItems = [
   { href: '/' as const, label: 'Home' },
+  { href: '/deploy' as const, label: 'Deploy', emphasis: true },
   { href: '/observatory' as const, label: 'Observatory' },
 ];
 
@@ -69,21 +70,29 @@ export function Header() {
         {/* Navigation */}
         <nav className="flex items-center gap-6">
           <ul className="flex items-center gap-1">
-            {navItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={clsx(
-                    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    pathname === item.href
-                      ? 'bg-slate-800 text-emerald-400'
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100'
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {navItems.map((item) => {
+              const isActive =
+                item.href === '/'
+                  ? pathname === '/'
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={clsx(
+                      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-slate-800 text-emerald-400'
+                        : item.emphasis
+                          ? 'text-emerald-300/90 hover:bg-emerald-500/10 hover:text-emerald-200'
+                          : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100'
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           {/* External Links */}

@@ -17,6 +17,7 @@ const socialLinks = [
 
 const internalLinks = [
   { href: '/' as const, label: 'Home' },
+  { href: '/deploy' as const, label: 'Deploy' },
   { href: '/observatory' as const, label: 'Observatory' },
 ];
 
@@ -41,9 +42,9 @@ export function Footer() {
               <span>swkoo.kr</span>
             </Link>
             <p className="text-sm text-slate-400">
-              GitOps-first Infrastructure Playground.
+              GitHub repo 하나로 앱을 라이브로.
               <br />
-              K3s 클러스터 위에서 파이프라인을 실험하고 전시합니다.
+              그 인프라는 운영 콘솔에서 그대로 공개됩니다.
             </p>
           </div>
 
