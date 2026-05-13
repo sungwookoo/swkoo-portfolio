@@ -419,6 +419,7 @@ type DeployState =
 
 function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const [state, setState] = useState<DeployState>({ kind: 'idle' });
 
   const handleDeploy = async (): Promise<void> => {
@@ -438,6 +439,12 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
     }
   };
 
+  const handleReconnect = async (): Promise<void> => {
+    await logout();
+    await mutate(ME_SWR_KEY, null, { revalidate: false });
+    window.location.href = loginUrl();
+  };
+
   return (
     <div className="space-y-2 border-t border-slate-800 pt-4">
       {state.kind === 'error' && (
@@ -447,14 +454,31 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
             {state.message}
           </p>
           {state.installUrl && (
-            <a
-              href={state.installUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/50"
-            >
-              이 repo에 App 설치하기 ↗
-            </a>
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={state.installUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/50"
+                >
+                  이 repo에 App 설치하기 ↗
+                </a>
+                <span className="text-xs text-slate-500">또는</span>
+                <button
+                  type="button"
+                  onClick={handleReconnect}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/50"
+                >
+                  로그아웃 후 다시 Connect ↺
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                다시 Connect 시 GitHub 화면에서 Repository access를{' '}
+                <span className="font-mono">All repositories</span> 로 바꾸시면 앞으로
+                새 repo도 추가 작업 없이 배포 가능합니다.
+              </p>
+            </>
           )}
         </div>
       )}

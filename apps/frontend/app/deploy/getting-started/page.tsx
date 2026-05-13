@@ -63,6 +63,20 @@ export default function GettingStartedPage(): JSX.Element {
           </p>
         </header>
 
+        <aside className="rounded-md border border-emerald-700/30 bg-emerald-500/5 p-4">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-400/80">
+            Tip
+          </p>
+          <p className="text-sm leading-relaxed text-zinc-300">
+            처음 <strong className="font-semibold text-zinc-100">Connect GitHub</strong> 클릭
+            시 GitHub 화면에서 <strong className="font-semibold text-zinc-100">All
+            repositories</strong>를 선택하시면 새 repo를 만들 때마다 추가 작업 없이 바로
+            Deploy할 수 있습니다. <em className="not-italic text-zinc-400">Only select
+            repositories</em>로 시작했더라도 나중에 로그아웃 후 다시 Connect하면 GitHub
+            화면에서 변경 가능합니다.
+          </p>
+        </aside>
+
         <ol className="flex flex-col">
           {sections.map((s) => (
             <li
