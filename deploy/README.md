@@ -43,6 +43,7 @@
   - `ARGOCD_WEBHOOK_SECRET`, `GITHUB_WEBHOOK_SECRET` — 웹훅 HMAC 검증
   - `ALERTMANAGER_AUTH_TOKEN` — Alertmanager가 인증 요구 시
   - `DISCORD_WEBHOOK_URL` — 신규 사용자 가입 시 Discord 알림 (없으면 알림 OFF)
+  - `DISCORD_BUILD_FAILURE_WEBHOOK_URL` — 사용자 repo GHA 빌드 실패 시 운영자 알림 (없으면 알림 OFF)
   - `BRAND_NAME`, `APPS_DOMAIN`, `MANIFEST_REPO`, `MANIFEST_BRANCH`, `APP_BASE_URL`, `PIPELINES_CACHE_TTL`, `ALERTS_CACHE_TTL` — 기본값 덮어쓸 때만
 
   키 추가/수정 (기존 키 보존하며 merge):
@@ -59,6 +60,12 @@
 > **운영 메모**: `DEPLOY_ALLOWLIST`는 Phase 2.7 (관리자 페이지) 이후 *초기 시드 전용*으로 남고, 실제 권한 체크는 `users.is_allowed` DB 컬럼에서 함. 친구 추가·제거는 `/admin`에서 토글. `ADMIN_LOGINS`는 그대로 env 단일 source.
 
 > **k8s API 권한 (Phase 2.8 — 사용자 env 패널)**: 백엔드는 `swkoo` namespace의 `swkoo-backend` ServiceAccount로 동작하며, 각 사용자 namespace에는 `templates.ts`가 register 시 자동 commit하는 Role + RoleBinding으로 Secret CRUD + Deployment patch 권한이 부여됩니다. 기존 사용자가 이 기능 이전에 등록했다면 한 번 재배포해야 본인 namespace에 RBAC이 생성됩니다 — 그 전엔 `/deploy/<login>/<repo>` 환경변수 패널이 "권한 없음" 표시.
+
+> **ApplicationSet refresh 권한 (Phase 2.9)**: register/delete 직후 백엔드가 `swkoo-users` ApplicationSet에 `argocd.argoproj.io/refresh=hard` 어노테이션을 패치해 ArgoCD가 즉시 sync하도록 합니다. 권한은 `deploy/argocd/swkoo-backend-applicationset-rbac.yaml`의 Role + RoleBinding으로 부여 — operator가 한 번만 적용하면 됨:
+> ```bash
+> kubectl apply -f deploy/argocd/swkoo-backend-applicationset-rbac.yaml
+> ```
+> 미적용 상태에서도 register/delete 자체는 동작하며, 기본 git poll(~3분)으로 sync는 결국 일어남.
 
 > **GitHub App 설정 — Connect 통합 플로우 동작을 위해 필수**:
 > - **Request user authorization (OAuth) during installation**: ✅ ON. 이 토글이 켜져 있으면 install URL 한 번으로 install + OAuth가 한 흐름으로 묶이고, GitHub이 *OAuth callback URL* 쪽으로 `code`+`state`+`installation_id`+`setup_action`을 함께 보냅니다. 이 모드에서는 Setup URL 필드가 GitHub UI에서 비활성화되므로 별도 입력 불필요.

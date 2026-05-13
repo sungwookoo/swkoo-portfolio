@@ -22,6 +22,9 @@ export interface OnboardingConfig {
   // Discord webhook URL fired on first sign-in for a given github_id. Empty
   // disables notifications. Failures are logged but don't block sign-in.
   discordWebhookUrl: string | undefined;
+  // Discord webhook URL fired when a user's deploy GHA workflow fails.
+  // Separate channel from signup so operator can route them differently.
+  discordBuildFailureWebhookUrl: string | undefined;
   // Where /api/deploy/register commits the rendered manifests.
   manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
   manifestBranch: string;
@@ -48,6 +51,7 @@ export const onboardingConfig = registerAs(
       .map((s) => s.trim())
       .filter(Boolean),
     discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || undefined,
+    discordBuildFailureWebhookUrl: process.env.DISCORD_BUILD_FAILURE_WEBHOOK_URL || undefined,
     manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-portfolio',
     manifestBranch: process.env.MANIFEST_BRANCH ?? 'main',
     appsDomain: process.env.APPS_DOMAIN ?? 'apps.swkoo.kr',

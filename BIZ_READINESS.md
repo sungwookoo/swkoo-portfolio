@@ -137,9 +137,9 @@ Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 
 Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손볼 만한 소규모 UX 항목:
 
-- **ApplicationSet 강제 refresh on register/delete** — 현재 git generator 폴링이 3분 주기라 등록 후 첫 Application 생성, 삭제 후 prune까지 최대 3분 지연. 백엔드가 k8s API로 `kubectl annotate applicationset swkoo-users argocd.argoproj.io/refresh=hard`를 호출하면 거의 즉시 반영. **필요한 작업**: 백엔드용 ServiceAccount + Role (apps namespace + argocd namespace 한정) + k8s 클라이언트 SDK. 친구 2~3명 받기 전에 처리하면 좋음.
+- ~~**ApplicationSet 강제 refresh on register/delete**~~ — ✅ Phase 2.9. 백엔드 `swkoo-backend` SA + `deploy/argocd/swkoo-backend-applicationset-rbac.yaml` Role로 register/delete 끝에 `argocd.argoproj.io/refresh=hard` patch 호출.
 - **Re-deploy 시 user repo no-op 감지** — 동일 사용자가 동일 repo로 재배포하면 백엔드가 Dockerfile/workflow를 매번 commit합니다. 내용이 byte-identical일 때 commit 건너뛰면 git history 노이즈 감소 + GHA 빌드 사이클 절약.
-- **Build 실패 시 명시적 알림** — 현재 진행도 페이지의 build stage가 'failed'로 표시되지만 사용자에게 push 알림이나 이메일은 안 감. Discord webhook으로 사용자에게 알리는 옵션 추가 검토.
+- ~~**Build 실패 시 명시적 알림**~~ — ✅ Phase 2.9 (운영자 한정). 진행도 페이지 폴링이 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 한 번만 알림. 사용자 직접 알림 채널은 별도 작업.
 
 ---
 

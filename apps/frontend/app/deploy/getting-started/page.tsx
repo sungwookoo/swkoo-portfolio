@@ -9,10 +9,12 @@ const sections = [
   {
     n: 1,
     title: 'Next.js 앱이 GitHub repo에 있어야 합니다',
-    body: '본인 owner인 repo에 Next.js 앱이 푸시돼 있어야 합니다. 없으시면 한 줄로 시작:',
+    body: '본인 owner인 repo에 Next.js 앱이 푸시돼 있어야 합니다. 두 가지 경로:',
+    templateUrl: 'https://github.com/sungwookoo/nextjs-sample/generate',
+    templateLabel: 'Use this template — sungwookoo/nextjs-sample 복제',
     code: 'npx create-next-app@latest my-app',
     after:
-      '특별한 설정 불필요. `output: "standalone"` 같은 옵션도 안 켜셔도 동작합니다.',
+      '템플릿은 swkoo.kr에서 바로 동작하도록 검증된 구성. 직접 만드셔도 `output: "standalone"` 같은 특수 설정은 불필요합니다.',
   },
   {
     n: 2,
@@ -103,6 +105,22 @@ export default function GettingStartedPage(): JSX.Element {
                 <p className="text-balance text-base leading-relaxed text-zinc-400">
                   {s.body}
                 </p>
+                {'templateUrl' in s && s.templateUrl && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={s.templateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-zinc-200"
+                    >
+                      <span>{s.templateLabel ?? 'Use this template'}</span>
+                      <span className="transition-transform group-hover:translate-x-0.5">↗</span>
+                    </a>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+                      또는
+                    </span>
+                  </div>
+                )}
                 {'code' in s && s.code && (
                   <pre className="overflow-x-auto rounded-md border border-zinc-900 bg-zinc-950 p-3 font-mono text-xs text-zinc-300">
                     <span className="text-zinc-600">$ </span>

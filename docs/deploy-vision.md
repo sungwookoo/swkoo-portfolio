@@ -100,7 +100,8 @@
 | 2.5 | 진행도 페이지 (5-stage checklist) | ✅ | `/deploy/[login]/[repo]` |
 | 2.6 | unregister 플로우 (배너 + 상세 페이지 카드) | ✅ | `DELETE /deploy` → 매니페스트 제거, ArgoCD prune, banner는 metadata.yaml/Application 상태 둘 다 추적 |
 | 2.7 | 관리자 페이지 v0 (allowlist DB 이관 + `/admin` UI) | ✅ | `ADMIN_LOGINS` env로 게이팅, `users.is_allowed` 토글, audit_log 기록 |
-| 2.8 | 사용자 env 패널 (`/deploy/<login>/<repo>` 환경변수 섹션) | 진행 중 | 백엔드 `swkoo-backend` SA + per-namespace RBAC, k8s Secret upsert + Deployment annotation patch로 자동 재시작 |
+| 2.8 | 사용자 env 패널 (`/deploy/<login>/<repo>` 환경변수 섹션) | ✅ | 백엔드 `swkoo-backend` SA + per-namespace RBAC, k8s Secret upsert + Deployment annotation patch로 자동 재시작 |
+| 2.9 | 사용자 마찰 묶음 (ApplicationSet refresh + 빌드 실패 운영자 알림 + Starter 템플릿) | ✅ | argocd ns Role로 refresh=hard 호출 → ~3분 폴링 갭 제거. 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 1회 알림. getting-started에 `sungwookoo/nextjs-sample` "Use this template" 버튼 |
 
 ---
 

@@ -1,0 +1,29 @@
+# Lets the swkoo-backend ServiceAccount in the swkoo namespace patch the
+# swkoo-users ApplicationSet — used to fire `argocd.argoproj.io/refresh=hard`
+# right after a /deploy register or delete, so ArgoCD picks up the new
+# manifests within seconds instead of the default ~3 min git-poll interval.
+#
+# Apply once with: kubectl apply -f deploy/argocd/swkoo-backend-applicationset-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swkoo-backend-applicationset-refresh
+  namespace: argocd
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applicationsets"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swkoo-backend-applicationset-refresh
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: swkoo-backend
+    namespace: swkoo
+roleRef:
+  kind: Role
+  name: swkoo-backend-applicationset-refresh
+  apiGroup: rbac.authorization.k8s.io

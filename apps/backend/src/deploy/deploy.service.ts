@@ -1,8 +1,10 @@
 import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
+import { PatchStrategy, setHeaderOptions } from '@kubernetes/client-node';
 import axios from 'axios';
 
 import { onboardingConfig } from '../config/onboarding.config';
+import { KubeClient } from '../kube/kube.client';
 import { AuthService } from '../onboarding/auth.service';
 import { UsersRepository } from '../onboarding/users.repository';
 import { ArgoCdClient } from '../pipelines/services/argo-cd.client';
@@ -107,12 +109,17 @@ interface GhaRunSummary {
 @Injectable()
 export class DeployService {
   private readonly logger = new Logger(DeployService.name);
+  // (login/repo → last GHA runId we already notified about). In-memory: on
+  // backend restart we may double-fire once if the user reloads the progress
+  // page right after; acceptable for an operator-side alert.
+  private readonly notifiedFailures = new Map<string, number>();
 
   constructor(
     private readonly auth: AuthService,
     private readonly githubApp: GithubAppService,
     private readonly users: UsersRepository,
     private readonly argo: ArgoCdClient,
+    private readonly kube: KubeClient,
     @Inject(onboardingConfig.KEY)
     private readonly config: ConfigType<typeof onboardingConfig>
   ) {}
@@ -333,6 +340,11 @@ export class DeployService {
       }),
     });
 
+    // Nudge ArgoCD to pick up the new metadata.yaml immediately instead of
+    // waiting for the default ~3 min git poll. Failure is non-fatal — the
+    // poll still gets it eventually.
+    void this.refreshUsersApplicationSet();
+
     return {
       ok: true,
       fullName: req.fullName,
@@ -469,7 +481,39 @@ export class DeployService {
       reason: null,
       metaJson: JSON.stringify({ commit }),
     });
+
+    void this.refreshUsersApplicationSet();
+
     return { commit };
+  }
+
+  /** Annotates the swkoo-users ApplicationSet with
+   * `argocd.argoproj.io/refresh=hard` so ArgoCD reconciles immediately
+   * after a register/delete commit. RBAC for this lives in
+   * deploy/argocd/swkoo-backend-applicationset-rbac.yaml — operator must
+   * have applied that once. Best-effort: 3 min poll fallback covers us
+   * if this fails. */
+  private async refreshUsersApplicationSet(): Promise<void> {
+    if (!this.kube.available()) return;
+    try {
+      await this.kube.custom!.patchNamespacedCustomObject(
+        {
+          group: 'argoproj.io',
+          version: 'v1alpha1',
+          namespace: 'argocd',
+          plural: 'applicationsets',
+          name: 'swkoo-users',
+          body: {
+            metadata: {
+              annotations: { 'argocd.argoproj.io/refresh': 'hard' },
+            },
+          },
+        },
+        setHeaderOptions('Content-Type', PatchStrategy.MergePatch)
+      );
+    } catch (err) {
+      this.logger.warn(`ApplicationSet refresh failed: ${(err as Error).message}`);
+    }
   }
 
   /** Aggregated status for the progress page. Each stage is computed
@@ -568,6 +612,7 @@ export class DeployService {
         };
       }
       if (run.status === 'completed') {
+        this.maybeNotifyBuildFailure(owner, repo, run);
         return {
           status: 'failed',
           message: `빌드 실패: ${run.conclusion ?? 'unknown'}`,
@@ -579,6 +624,31 @@ export class DeployService {
       this.logger.warn(`checkBuildStage failed: ${(err as Error).message}`);
       return { status: 'pending', message: '빌드 상태 확인 중' };
     }
+  }
+
+  private maybeNotifyBuildFailure(
+    owner: string,
+    repo: string,
+    run: GhaRunSummary
+  ): void {
+    const url = this.config.discordBuildFailureWebhookUrl;
+    if (!url) return;
+    if (run.conclusion === 'success') return;
+    const key = `${owner.toLowerCase()}/${repo}`;
+    if (this.notifiedFailures.get(key) === run.id) return;
+    this.notifiedFailures.set(key, run.id);
+
+    const lines = [
+      '🔴 빌드 실패',
+      `**${owner}/${repo}** @ ${run.head_sha.slice(0, 7)}`,
+      `결론: ${run.conclusion ?? 'unknown'}`,
+      `로그: ${run.html_url}`,
+    ];
+    void axios
+      .post(url, { content: lines.join('\n') }, { timeout: 5000 })
+      .catch((err) => {
+        this.logger.error(`Build-failure Discord webhook failed: ${(err as Error).message}`);
+      });
   }
 
   private checkImageDetectedStage(app: unknown): StageInfo {
