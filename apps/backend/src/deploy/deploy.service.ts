@@ -146,17 +146,37 @@ export class DeployService {
 
   async detectStack(userId: number, owner: string, repo: string): Promise<StackPreview> {
     const accessToken = await this.auth.getValidAccessToken(userId);
+    const headers = {
+      Authorization: `token ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+    };
+
+    // Default branch must be 'main' — the generated workflow triggers on
+    // pushes to main, so non-main repos would never build. Catch it here so
+    // the preview surfaces the issue before the user clicks Deploy.
+    try {
+      const repoResp = await axios.get<{ default_branch: string }>(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { headers }
+      );
+      if (repoResp.data.default_branch !== 'main') {
+        return {
+          stack: 'unsupported',
+          reason: `기본 브랜치가 'main'이어야 합니다 (현재: '${repoResp.data.default_branch}'). repo Settings → Branches에서 변경 후 다시 시도해주세요.`,
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `detectStack repo metadata failed for ${owner}/${repo}: ${(err as Error).message}`
+      );
+      return { stack: 'unsupported', reason: 'repo metadata를 읽을 수 없습니다.' };
+    }
 
     let pkg: { name?: string; dependencies?: Record<string, string>; devDependencies?: Record<string, string>; engines?: { node?: string } };
     try {
       const resp = await axios.get<GithubContent>(
         `https://api.github.com/repos/${owner}/${repo}/contents/package.json`,
-        {
-          headers: {
-            Authorization: `token ${accessToken}`,
-            Accept: 'application/vnd.github+json',
-          },
-        }
+        { headers }
       );
       const content = Buffer.from(resp.data.content, 'base64').toString('utf8');
       pkg = JSON.parse(content);
