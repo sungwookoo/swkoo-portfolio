@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { V1Deployment, V1Secret } from '@kubernetes/client-node';
+import { PatchStrategy, setHeaderOptions, V1Secret } from '@kubernetes/client-node';
 
 import { KubeClient } from '../kube/kube.client';
 import { UsersRepository } from '../onboarding/users.repository';
@@ -117,9 +117,26 @@ export class EnvService {
 
   private async triggerRestart(login: string, appName: string): Promise<void> {
     const namespace = this.ns(login);
-    let deployment: V1Deployment;
+    // Strategic-merge patch on just the pod template annotation. Doesn't
+    // touch image, replicas, env — so it never fights with Image Updater
+    // or ArgoCD. Requires only the `patch` verb (Role grants it; the older
+    // replace-based code path needed `update`, which the Role didn't have).
+    const patchBody = {
+      spec: {
+        template: {
+          metadata: {
+            annotations: {
+              [ANNOTATION_KEY]: new Date().toISOString(),
+            },
+          },
+        },
+      },
+    };
     try {
-      deployment = await this.kube.apps!.readNamespacedDeployment({ name: appName, namespace });
+      await this.kube.apps!.patchNamespacedDeployment(
+        { name: appName, namespace, body: patchBody },
+        setHeaderOptions('Content-Type', PatchStrategy.StrategicMergePatch)
+      );
     } catch (err) {
       if (getStatus(err) === 404) {
         this.logger.warn(
@@ -129,20 +146,5 @@ export class EnvService {
       }
       throw err;
     }
-
-    const spec = deployment.spec;
-    if (!spec) {
-      this.logger.warn(`triggerRestart: deployment ${appName} has no spec`);
-      return;
-    }
-    if (!spec.template.metadata) spec.template.metadata = {};
-    if (!spec.template.metadata.annotations) spec.template.metadata.annotations = {};
-    spec.template.metadata.annotations[ANNOTATION_KEY] = new Date().toISOString();
-
-    await this.kube.apps!.replaceNamespacedDeployment({
-      name: appName,
-      namespace,
-      body: deployment,
-    });
   }
 }

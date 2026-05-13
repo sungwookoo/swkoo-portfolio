@@ -419,7 +419,6 @@ type DeployState =
 
 function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
   const router = useRouter();
-  const { mutate } = useSWRConfig();
   const [state, setState] = useState<DeployState>({ kind: 'idle' });
 
   const handleDeploy = async (): Promise<void> => {
@@ -437,12 +436,6 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
         installUrl: e.installUrl,
       });
     }
-  };
-
-  const handleReconnect = async (): Promise<void> => {
-    await logout();
-    await mutate(ME_SWR_KEY, null, { revalidate: false });
-    window.location.href = loginUrl();
   };
 
   return (
@@ -465,18 +458,19 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
                   이 repo에 App 설치하기 ↗
                 </a>
                 <span className="text-xs text-slate-500">또는</span>
-                <button
-                  type="button"
-                  onClick={handleReconnect}
+                <a
+                  href="https://github.com/apps/swkoo-deploy/installations/select_target"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/50"
                 >
-                  로그아웃 후 다시 Connect ↺
-                </button>
+                  GitHub에서 repo access 변경 ↗
+                </a>
               </div>
               <p className="text-xs text-slate-500">
-                다시 Connect 시 GitHub 화면에서 Repository access를{' '}
-                <span className="font-mono">All repositories</span> 로 바꾸시면 앞으로
-                새 repo도 추가 작업 없이 배포 가능합니다.
+                두 번째 옵션은 GitHub의 설치 관리 페이지로 이동합니다 —
+                Repository access를 <span className="font-mono">All repositories</span>로
+                바꾸면 앞으로 새 repo도 추가 작업 없이 배포 가능합니다.
               </p>
             </>
           )}

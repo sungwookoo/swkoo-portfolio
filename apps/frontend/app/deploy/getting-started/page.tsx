@@ -72,8 +72,16 @@ export default function GettingStartedPage(): JSX.Element {
             시 GitHub 화면에서 <strong className="font-semibold text-zinc-100">All
             repositories</strong>를 선택하시면 새 repo를 만들 때마다 추가 작업 없이 바로
             Deploy할 수 있습니다. <em className="not-italic text-zinc-400">Only select
-            repositories</em>로 시작했더라도 나중에 로그아웃 후 다시 Connect하면 GitHub
-            화면에서 변경 가능합니다.
+            repositories</em>로 시작했더라도 나중에{' '}
+            <a
+              href="https://github.com/apps/swkoo-deploy/installations/select_target"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-zinc-700 underline-offset-2 hover:text-zinc-100 hover:decoration-zinc-500"
+            >
+              GitHub 설치 관리 페이지 ↗
+            </a>{' '}
+            에서 Repository access를 변경할 수 있습니다.
           </p>
         </aside>
 
