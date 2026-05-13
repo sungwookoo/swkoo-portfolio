@@ -99,7 +99,8 @@
 | 2.4 | 매니페스트 자동 commit (`deploy/users/<login>/`) | ✅ | namespace + quota + limit-range + netpol + kustomization + metadata + deployment/service/ingress |
 | 2.5 | 진행도 페이지 (5-stage checklist) | ✅ | `/deploy/[login]/[repo]` |
 | 2.6 | unregister 플로우 (배너 + 상세 페이지 카드) | ✅ | `DELETE /deploy` → 매니페스트 제거, ArgoCD prune, banner는 metadata.yaml/Application 상태 둘 다 추적 |
-| 2.7 | 관리자 페이지 v0 (allowlist DB 이관 + `/admin` UI) | 진행 중 | `ADMIN_LOGINS` env로 게이팅, `users.is_allowed` 토글, audit_log 기록 |
+| 2.7 | 관리자 페이지 v0 (allowlist DB 이관 + `/admin` UI) | ✅ | `ADMIN_LOGINS` env로 게이팅, `users.is_allowed` 토글, audit_log 기록 |
+| 2.8 | 사용자 env 패널 (`/deploy/<login>/<repo>` 환경변수 섹션) | 진행 중 | 백엔드 `swkoo-backend` SA + per-namespace RBAC, k8s Secret upsert + Deployment annotation patch로 자동 재시작 |
 
 ---
 

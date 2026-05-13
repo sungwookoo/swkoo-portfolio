@@ -20,6 +20,7 @@ spec:
       labels:
         app: swkoo-backend
     spec:
+      serviceAccountName: swkoo-backend
       imagePullSecrets:
         - name: ocir-credentials
       volumes:

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
@@ -9,9 +9,12 @@ import {
   CURRENT_SWR_KEY,
   deleteCurrentDeployment,
   DeploymentStatus,
+  envSwrKey,
+  saveEnvVars,
   StageInfo,
   StageStatus,
   useDeploymentStatus,
+  useEnvVars,
 } from '@/lib/deploy';
 
 interface StatusClientProps {
@@ -47,6 +50,8 @@ export function StatusClient({ login, repo }: StatusClientProps): JSX.Element {
         )}
         {status && <Checklist status={status} />}
 
+        {status && <EnvVarsPanel login={login} repo={repo} />}
+
         {status && <DeleteCard login={login} repo={repo} />}
 
         <footer className="border-t border-slate-800 pt-6">
@@ -59,6 +64,195 @@ export function StatusClient({ login, repo }: StatusClientProps): JSX.Element {
         </footer>
       </div>
     </main>
+  );
+}
+
+interface EnvRow {
+  id: string;
+  key: string;
+  value: string;
+  revealed: boolean;
+}
+
+const KEY_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
+
+function EnvVarsPanel({ login, repo }: { login: string; repo: string }): JSX.Element {
+  const { vars: serverVars, isLoading, error } = useEnvVars(login, repo);
+  const { mutate } = useSWRConfig();
+  const [rows, setRows] = useState<EnvRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!serverVars) return;
+    setRows(
+      Object.entries(serverVars).map(([k, v], i) => ({
+        id: `s-${i}-${k}`,
+        key: k,
+        value: v,
+        revealed: false,
+      }))
+    );
+  }, [serverVars]);
+
+  const dirty = useMemo(() => {
+    const cleaned: Record<string, string> = {};
+    for (const r of rows) {
+      if (r.key) cleaned[r.key] = r.value;
+    }
+    const sv = serverVars ?? {};
+    const ck = Object.keys(cleaned);
+    const sk = Object.keys(sv);
+    if (ck.length !== sk.length) return true;
+    return ck.some((k) => cleaned[k] !== sv[k]);
+  }, [rows, serverVars]);
+
+  const hasInvalidKey = rows.some((r) => r.key && !KEY_PATTERN.test(r.key));
+
+  const handleAdd = (): void => {
+    setRows((prev) => [
+      ...prev,
+      { id: `new-${Date.now()}-${prev.length}`, key: '', value: '', revealed: true },
+    ]);
+  };
+
+  const handleRemove = (id: string): void => {
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleField = (id: string, field: 'key' | 'value', v: string): void => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, [field]: v, ...(field === 'value' ? { revealed: true } : {}) } : r
+      )
+    );
+  };
+
+  const toggleReveal = (id: string): void => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, revealed: !r.revealed } : r)));
+  };
+
+  const handleSave = async (): Promise<void> => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const vars: Record<string, string> = {};
+      for (const r of rows) {
+        if (!r.key) continue;
+        vars[r.key] = r.value;
+      }
+      await saveEnvVars(login, repo, vars);
+      await mutate(envSwrKey(login, repo));
+      setRows((prev) => prev.map((r) => ({ ...r, revealed: false })));
+      setLastSavedAt(Date.now());
+    } catch (err) {
+      setSaveError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const rbacErr = error?.message.includes('RBAC') || error?.message.includes('403');
+
+  return (
+    <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+      <header className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-medium text-slate-300">환경변수</h3>
+        {lastSavedAt && !dirty && !saving && (
+          <span className="text-xs text-emerald-400">✓ 적용됨 · ~10초 안에 Pod 재시작</span>
+        )}
+      </header>
+      <p className="text-xs text-slate-500">
+        Pod 런타임 env. 키는 대문자/숫자/언더스코어 (<span className="font-mono">^[A-Z_][A-Z0-9_]*$</span>).
+        Save 시 매니페스트의 envFrom Secret이 갱신되고 Pod이 자동 재시작됩니다.
+      </p>
+
+      {rbacErr && (
+        <p className="text-sm text-amber-400">
+          이 namespace에 아직 권한이 없습니다 — `/deploy`에서 한 번 재배포하면 RBAC이 생성되어
+          이 패널이 활성화됩니다.
+        </p>
+      )}
+      {error && !rbacErr && (
+        <p className="text-sm text-amber-400">조회 실패: {error.message}</p>
+      )}
+      {isLoading && !serverVars && !error && (
+        <p className="text-xs text-slate-500">불러오는 중…</p>
+      )}
+
+      {!rbacErr && (serverVars !== undefined) && (
+        <>
+          {rows.length === 0 ? (
+            <p className="text-xs text-slate-600">등록된 환경변수가 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {rows.map((r) => {
+                const keyInvalid = Boolean(r.key) && !KEY_PATTERN.test(r.key);
+                return (
+                  <div key={r.id} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={r.key}
+                      onChange={(e) => handleField(r.id, 'key', e.target.value)}
+                      placeholder="DATABASE_URL"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className={`w-44 rounded-md border bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 placeholder-slate-700 focus:outline-none focus:border-slate-600 ${keyInvalid ? 'border-amber-500/50' : 'border-slate-800'}`}
+                    />
+                    <input
+                      type={r.revealed ? 'text' : 'password'}
+                      value={r.value}
+                      onChange={(e) => handleField(r.id, 'value', e.target.value)}
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="flex-1 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:outline-none focus:border-slate-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleReveal(r.id)}
+                      className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-500 hover:border-slate-700 hover:text-slate-300"
+                      aria-label={r.revealed ? 'Hide value' : 'Show value'}
+                    >
+                      {r.revealed ? 'Hide' : 'Show'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(r.id)}
+                      className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-500 hover:border-red-700/40 hover:text-red-400"
+                      aria-label="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-900 pt-3">
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="text-xs text-slate-400 hover:text-slate-200"
+            >
+              + Add variable
+            </button>
+            <div className="flex items-center gap-2">
+              {saveError && <span className="text-xs text-amber-400">{saveError}</span>}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving || !dirty || hasInvalidKey}
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+              >
+                {saving ? '저장 중…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

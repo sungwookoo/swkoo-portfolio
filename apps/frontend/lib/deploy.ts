@@ -164,6 +164,60 @@ export function useDeploymentStatus(
   return { status: data, isLoading, error };
 }
 
+export function envSwrKey(login: string, repo: string): string {
+  return `${API_BASE_URL}/deploy/env/${encodeURIComponent(login)}/${encodeURIComponent(repo)}`;
+}
+
+export function useEnvVars(
+  login: string | null,
+  repo: string | null
+): {
+  vars: Record<string, string> | undefined;
+  isLoading: boolean;
+  error: Error | undefined;
+} {
+  const key = login && repo ? envSwrKey(login, repo) : null;
+  const { data, error, isLoading } = useSWR<{ vars: Record<string, string> }>(
+    key,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  return { vars: data?.vars, isLoading, error };
+}
+
+export async function saveEnvVars(
+  login: string,
+  repo: string,
+  vars: Record<string, string>
+): Promise<{ ok: true; count: number }> {
+  const response = await fetch(envSwrKey(login, repo), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vars }),
+  });
+  if (!response.ok) {
+    let payload: { message?: string | { reason?: string; message?: string } } = {};
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      // ignore parse error
+    }
+    const detail = payload.message;
+    if (detail && typeof detail === 'object' && 'reason' in detail) {
+      const err = new Error(detail.message ?? detail.reason ?? 'save failed') as Error & {
+        reason?: string;
+      };
+      err.reason = detail.reason;
+      throw err;
+    }
+    throw new Error(
+      typeof detail === 'string' ? detail : `save failed (${response.status})`
+    );
+  }
+  return (await response.json()) as { ok: true; count: number };
+}
+
 export async function registerDeploy(fullName: string): Promise<RegisterResponse> {
   const response = await fetch(`${API_BASE_URL}/deploy/register`, {
     method: 'POST',

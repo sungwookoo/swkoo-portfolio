@@ -58,6 +58,8 @@
 
 > **운영 메모**: `DEPLOY_ALLOWLIST`는 Phase 2.7 (관리자 페이지) 이후 *초기 시드 전용*으로 남고, 실제 권한 체크는 `users.is_allowed` DB 컬럼에서 함. 친구 추가·제거는 `/admin`에서 토글. `ADMIN_LOGINS`는 그대로 env 단일 source.
 
+> **k8s API 권한 (Phase 2.8 — 사용자 env 패널)**: 백엔드는 `swkoo` namespace의 `swkoo-backend` ServiceAccount로 동작하며, 각 사용자 namespace에는 `templates.ts`가 register 시 자동 commit하는 Role + RoleBinding으로 Secret CRUD + Deployment patch 권한이 부여됩니다. 기존 사용자가 이 기능 이전에 등록했다면 한 번 재배포해야 본인 namespace에 RBAC이 생성됩니다 — 그 전엔 `/deploy/<login>/<repo>` 환경변수 패널이 "권한 없음" 표시.
+
 > **GitHub App 설정 — Connect 통합 플로우 동작을 위해 필수**:
 > - **Request user authorization (OAuth) during installation**: ✅ ON. 이 토글이 켜져 있으면 install URL 한 번으로 install + OAuth가 한 흐름으로 묶이고, GitHub이 *OAuth callback URL* 쪽으로 `code`+`state`+`installation_id`+`setup_action`을 함께 보냅니다. 이 모드에서는 Setup URL 필드가 GitHub UI에서 비활성화되므로 별도 입력 불필요.
 > - **User authorization callback URL**: `https://swkoo.kr/api/auth/github/callback`

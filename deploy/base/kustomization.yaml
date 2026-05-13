@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: swkoo
 resources:
   - common/namespace.yaml
+  - backend/serviceaccount.yaml
   - backend/deployment.yaml
   - backend/service.yaml
   - backend/ingress.yaml

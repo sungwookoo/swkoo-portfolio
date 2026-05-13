@@ -27,10 +27,10 @@ const sections = [
   {
     n: 4,
     title: 'v0 제약 — 미리 알아두실 것',
-    body: '현재 단계에서 지원하지 않는 것들:',
+    body: '현재 단계에서 지원하는/지원하지 않는 항목:',
     bullets: [
-      '런타임 환경변수 주입 ❌ (빌드 시점 GitHub Actions secrets는 가능)',
-      '클러스터 내 영속 스토리지 ❌ — Supabase·Neon 같은 외부 DB 연결은 자유',
+      '런타임 환경변수 ✅ — 배포 후 `/deploy/<login>/<repo>` 페이지의 "환경변수" 패널에서 추가. Save 시 Pod 자동 재시작',
+      '클러스터 내 영속 스토리지 ❌ — Supabase·Neon 같은 외부 DB 연결은 자유 (위의 환경변수로 URL/key 주입)',
       '한 사용자당 앱 1개 (재배포는 같은 앱 슬롯을 덮어씁니다)',
     ],
   },

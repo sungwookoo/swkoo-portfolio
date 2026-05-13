@@ -41,6 +41,8 @@ export function renderManifestFiles(params: RenderParams): Record<string, string
     [`${base}/resource-quota.yaml`]: renderResourceQuota(params),
     [`${base}/limit-range.yaml`]: renderLimitRange(params),
     [`${base}/network-policy.yaml`]: renderNetworkPolicy(params),
+    [`${base}/role.yaml`]: renderRole(params),
+    [`${base}/role-binding.yaml`]: renderRoleBinding(params),
     [`${base}/kustomization.yaml`]: renderKustomization(params),
     [`${base}/metadata.yaml`]: renderMetadata(params),
     [`${base}/${params.appName}/deployment.yaml`]: renderDeployment(params),
@@ -214,9 +216,44 @@ resources:
   - resource-quota.yaml
   - limit-range.yaml
   - network-policy.yaml
+  - role.yaml
+  - role-binding.yaml
   - ${params.appName}/deployment.yaml
   - ${params.appName}/service.yaml
   - ${params.appName}/ingress.yaml
+`;
+}
+
+function renderRole(params: RenderParams): string {
+  return `${GENERATED_HEADER}apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swkoo-backend-env-manager
+  namespace: user-${params.login}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
+`;
+}
+
+function renderRoleBinding(params: RenderParams): string {
+  return `${GENERATED_HEADER}apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swkoo-backend-env-manager
+  namespace: user-${params.login}
+subjects:
+  - kind: ServiceAccount
+    name: swkoo-backend
+    namespace: swkoo
+roleRef:
+  kind: Role
+  name: swkoo-backend-env-manager
+  apiGroup: rbac.authorization.k8s.io
 `;
 }
 
@@ -255,6 +292,12 @@ spec:
           ports:
             - containerPort: ${params.port}
               name: http
+          envFrom:
+            # Populated by swkoo.kr/deploy → Environment variables panel.
+            # optional:true so the Pod boots before the user sets anything.
+            - secretRef:
+                name: ${params.appName}-env
+                optional: true
           securityContext:
             runAsNonRoot: true
             runAsUser: ${params.uid}
