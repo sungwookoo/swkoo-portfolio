@@ -2,14 +2,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-test
+  name: my-arxiv
   namespace: user-hizieun
   labels:
-    app: my-test
+    app: my-arxiv
     swkoo.kr/user: hizieun
 spec:
   selector:
-    app: my-test
+    app: my-arxiv
   ports:
     - name: http
       port: 80

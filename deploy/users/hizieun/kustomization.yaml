@@ -6,6 +6,8 @@ resources:
   - resource-quota.yaml
   - limit-range.yaml
   - network-policy.yaml
-  - my-test/deployment.yaml
-  - my-test/service.yaml
-  - my-test/ingress.yaml
+  - role.yaml
+  - role-binding.yaml
+  - my-arxiv/deployment.yaml
+  - my-arxiv/service.yaml
+  - my-arxiv/ingress.yaml

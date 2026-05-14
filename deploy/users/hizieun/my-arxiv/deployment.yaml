@@ -2,29 +2,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-test
+  name: my-arxiv
   namespace: user-hizieun
   labels:
-    app: my-test
+    app: my-arxiv
     swkoo.kr/user: hizieun
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-test
+      app: my-arxiv
   template:
     metadata:
       labels:
-        app: my-test
+        app: my-arxiv
         swkoo.kr/user: hizieun
     spec:
       containers:
-        - name: my-test
-          image: ghcr.io/hizieun/my-test:latest
+        - name: my-arxiv
+          image: ghcr.io/hizieun/my-arxiv:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
+          envFrom:
+            # Populated by swkoo.kr/deploy → Environment variables panel.
+            # optional:true so the Pod boots before the user sets anything.
+            - secretRef:
+                name: my-arxiv-env
+                optional: true
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

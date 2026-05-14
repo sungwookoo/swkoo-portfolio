@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: my-test
+  name: my-arxiv
   namespace: user-hizieun
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod-dns
@@ -10,16 +10,16 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - hizieun-my-test.apps.swkoo.kr
-      secretName: my-test-tls
+        - hizieun-my-arxiv.apps.swkoo.kr
+      secretName: my-arxiv-tls
   rules:
-    - host: hizieun-my-test.apps.swkoo.kr
+    - host: hizieun-my-arxiv.apps.swkoo.kr
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: my-test
+                name: my-arxiv
                 port:
                   number: 80
