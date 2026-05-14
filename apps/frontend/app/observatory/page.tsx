@@ -11,6 +11,7 @@ import {
 import { AlertList } from '@/components/AlertList';
 import { PipelineSection } from '@/components/PipelineSection';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
+import { ScopeToggle } from '@/components/ScopeToggle';
 import {
   architecture,
   cicdScenarios,
@@ -55,10 +56,15 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-export default async function ObservatoryPage() {
+export default async function ObservatoryPage({
+  searchParams,
+}: {
+  searchParams?: { scope?: string };
+}) {
+  const scope = searchParams?.scope === 'mine' ? 'mine' : undefined;
   const [pipelinesEnvelope, alertsEnvelope] = await Promise.all([
-    fetchPipelines(),
-    fetchAlerts(),
+    fetchPipelines(scope),
+    fetchAlerts(scope),
   ]);
   const pipelinesConfigured = pipelinesEnvelope.configured;
   const pipelines = pipelinesEnvelope.pipelines;
@@ -116,12 +122,15 @@ export default async function ObservatoryPage() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
       {/* Hero */}
       <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-4xl">{hero.emoji}</span>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-50">{hero.title}</h1>
-            <p className="text-slate-400">{hero.subtitle}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">{hero.emoji}</span>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-50">{hero.title}</h1>
+              <p className="text-slate-400">{hero.subtitle}</p>
+            </div>
           </div>
+          <ScopeToggle currentScope={scope ?? null} />
         </div>
       </section>
 

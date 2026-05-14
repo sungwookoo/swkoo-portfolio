@@ -8,6 +8,7 @@ import { AdminGuard } from './admin.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import { UsersRepository } from './users.repository';
 
 @Module({
@@ -16,7 +17,7 @@ import { UsersRepository } from './users.repository';
     ConfigModule.forFeature(webhooksConfig),
   ],
   controllers: [AuthController, AdminController],
-  providers: [AuthService, UsersRepository, JwtAuthGuard, AdminGuard],
-  exports: [AuthService, UsersRepository, JwtAuthGuard, AdminGuard],
+  providers: [AuthService, UsersRepository, JwtAuthGuard, OptionalJwtAuthGuard, AdminGuard],
+  exports: [AuthService, UsersRepository, JwtAuthGuard, OptionalJwtAuthGuard, AdminGuard],
 })
 export class OnboardingModule {}

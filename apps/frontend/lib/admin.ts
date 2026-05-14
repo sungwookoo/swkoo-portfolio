@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-import { API_BASE_URL } from './api';
+import { API_BASE_URL } from './api-base';
 
 export interface AdminUser {
   githubLogin: string;

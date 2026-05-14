@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+
 import type {
   AlertsEnvelope,
   DeploymentsEnvelope,
@@ -6,14 +8,27 @@ import type {
   PortfolioOverview,
   WorkflowsEnvelope
 } from './types';
+import { API_BASE_URL } from './api-base';
 
-const defaultBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  (process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000/api'
-    : 'https://swkoo.kr/api');
+export { API_BASE_URL };
 
-export const API_BASE_URL = defaultBaseUrl;
+// Observatory/pipeline/alert endpoints now apply per-viewer filtering, so we
+// need to forward the session cookie from the incoming request and skip the
+// Next.js fetch cache (which keys by URL only and would leak responses
+// across viewers).
+function serverFetchInit(): RequestInit {
+  const cookieHeader = cookies().toString();
+  return {
+    cache: 'no-store',
+    headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+  };
+}
+
+function withScope(url: string, scope: string | undefined): string {
+  if (!scope) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}scope=${encodeURIComponent(scope)}`;
+}
 
 export async function fetchOverview(): Promise<PortfolioOverview | null> {
   if (!API_BASE_URL) {
@@ -37,7 +52,7 @@ export async function fetchOverview(): Promise<PortfolioOverview | null> {
   }
 }
 
-export async function fetchPipelines(): Promise<PipelinesEnvelope> {
+export async function fetchPipelines(scope?: string): Promise<PipelinesEnvelope> {
   if (!API_BASE_URL) {
     return {
       configured: false,
@@ -47,9 +62,10 @@ export async function fetchPipelines(): Promise<PipelinesEnvelope> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/pipelines`, {
-      next: { revalidate: 15 }
-    });
+    const response = await fetch(
+      withScope(`${API_BASE_URL}/pipelines`, scope),
+      serverFetchInit()
+    );
 
     if (!response.ok) {
       console.warn('Failed to load pipelines', response.statusText);
@@ -77,7 +93,7 @@ export async function fetchPipelines(): Promise<PipelinesEnvelope> {
   }
 }
 
-export async function fetchAlerts(): Promise<AlertsEnvelope> {
+export async function fetchAlerts(scope?: string): Promise<AlertsEnvelope> {
   if (!API_BASE_URL) {
     return {
       configured: false,
@@ -87,9 +103,10 @@ export async function fetchAlerts(): Promise<AlertsEnvelope> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/alerts`, {
-      next: { revalidate: 15 }
-    });
+    const response = await fetch(
+      withScope(`${API_BASE_URL}/alerts`, scope),
+      serverFetchInit()
+    );
 
     if (!response.ok) {
       console.warn('Failed to load alerts', response.statusText);
@@ -132,7 +149,7 @@ export async function fetchDeployments(
 
   try {
     const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/deployments?limit=${limit}`;
-    const response = await fetch(url, { next: { revalidate: 60 } });
+    const response = await fetch(url, serverFetchInit());
 
     if (!response.ok) {
       console.warn('Failed to load deployments', response.statusText);
@@ -159,7 +176,7 @@ export async function fetchEventSummary(
   if (!API_BASE_URL) return null;
   try {
     const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/event-summary?windowDays=${windowDays}`;
-    const response = await fetch(url, { next: { revalidate: 30 } });
+    const response = await fetch(url, serverFetchInit());
     if (!response.ok) {
       console.warn('Failed to load event summary', response.statusText);
       return null;
@@ -200,9 +217,7 @@ export async function fetchWorkflows(
     const queryString = params.toString();
     const url = `${API_BASE_URL}/pipelines/${encodeURIComponent(pipelineName)}/workflows${queryString ? `?${queryString}` : ''}`;
 
-    const response = await fetch(url, {
-      next: { revalidate: 30 }
-    });
+    const response = await fetch(url, serverFetchInit());
 
     if (!response.ok) {
       console.warn('Failed to load workflows', response.statusText);
