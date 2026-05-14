@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSWRConfig } from 'swr';
@@ -32,6 +32,14 @@ export function DeployPageClient(): JSX.Element {
     await logout();
     await mutate(ME_SWR_KEY, null, { revalidate: false });
   };
+
+  // Phase 3.2: gate on consent. Bounce to /consent if signed in but the
+  // user hasn't accepted the current policy version.
+  useEffect(() => {
+    if (!isLoading && me && me.requiresConsent) {
+      router.replace('/consent?next=/deploy');
+    }
+  }, [isLoading, me, router]);
 
   if (isLoading) {
     return (
@@ -69,6 +77,12 @@ export function DeployPageClient(): JSX.Element {
         </div>
       </Shell>
     );
+  }
+
+  // Render nothing during the consent redirect — the useEffect above already
+  // called router.replace. Without this, the deploy UI flashes for a frame.
+  if (me.requiresConsent) {
+    return <Shell><p className="text-slate-500">Loading…</p></Shell>;
   }
 
   if (me.requiresReauth) {

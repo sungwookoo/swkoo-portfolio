@@ -19,17 +19,19 @@ export function AdminPageClient(): JSX.Element {
 
   // Bounce non-admins. We don't render anything admin-shaped for them, so
   // the URL doesn't leak structure. Signed-out → /deploy (sign-in lives there);
-  // signed-in but not admin → /.
+  // signed-in but not admin → /. Phase 3.2: admins also go through consent.
   useEffect(() => {
     if (meLoading) return;
     if (!me) {
       router.replace('/deploy');
+    } else if (me.requiresConsent) {
+      router.replace('/consent?next=/admin');
     } else if (!me.isAdmin) {
       router.replace('/');
     }
   }, [me, meLoading, router]);
 
-  if (meLoading || !me || !me.isAdmin) {
+  if (meLoading || !me || me.requiresConsent || !me.isAdmin) {
     return <Shell><p className="text-zinc-500">Loading…</p></Shell>;
   }
 

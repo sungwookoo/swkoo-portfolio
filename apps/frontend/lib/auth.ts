@@ -11,7 +11,21 @@ export interface Me {
   isAllowed: boolean;
   isAdmin: boolean;
   requiresReauth: boolean;
+  requiresConsent: boolean;
+  policyVersion: string;
   brandName: string;
+}
+
+export async function acceptConsent(version: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/consent`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ version }),
+  });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`);
+  }
 }
 
 async function fetcher(url: string): Promise<Me | null> {

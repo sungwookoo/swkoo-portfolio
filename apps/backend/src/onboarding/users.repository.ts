@@ -24,6 +24,7 @@ export interface UserRow {
   createdAt: string;
   lastLoginAt: string;
   isAllowed: boolean;
+  policyVersion: string | null;
 }
 
 export interface TokenSet {
@@ -97,6 +98,12 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     // making the row identifiable. A separate cron (TODO) hard-deletes rows
     // older than 30 days per the privacy policy.
     this.addColumnIfMissing('users', 'deleted_at', 'TEXT');
+    // Phase 3.2: privacy/terms consent tracking. policy_version captures the
+    // version the user last accepted; bumping CURRENT_POLICY_VERSION forces a
+    // re-consent. Nullable for legacy rows pre-consent feature — those are
+    // also routed through the consent screen on first /deploy visit.
+    this.addColumnIfMissing('users', 'policy_version', 'TEXT');
+    this.addColumnIfMissing('users', 'policy_accepted_at', 'TEXT');
     this.logger.log('users + audit_log tables ready');
   }
 
@@ -116,7 +123,8 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     id, github_id AS githubId, github_login AS githubLogin,
     name, email, avatar_url AS avatarUrl,
     created_at AS createdAt, last_login_at AS lastLoginAt,
-    CASE WHEN is_allowed = 1 THEN 1 ELSE 0 END AS isAllowed
+    CASE WHEN is_allowed = 1 THEN 1 ELSE 0 END AS isAllowed,
+    policy_version AS policyVersion
   `;
 
   private hydrate(row: unknown): UserRow {
@@ -210,6 +218,17 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
         .run(placeholder, userId);
     });
     tx(id);
+  }
+
+  acceptPolicy(userId: number, version: string): void {
+    this.db
+      .prepare(
+        `UPDATE users
+         SET policy_version = ?,
+             policy_accepted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE id = ?`
+      )
+      .run(version, userId);
   }
 
   /** Read audit entries authored by this user. Used for data export. */

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -19,6 +20,11 @@ import { UsersRepository } from './users.repository';
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
+
+/** Bump this when /privacy or /terms changes substantively — users with a
+ * stored version != this constant are routed through /consent on next
+ * gated-page visit. Keep in sync with the 시행일자 on both policy pages. */
+export const CURRENT_POLICY_VERSION = '2026-05-14';
 
 function readCookie(req: Request, name: string): string | undefined {
   const value = (req.cookies as Record<string, unknown> | undefined)?.[name];
@@ -123,8 +129,41 @@ export class AuthController {
       isAllowed: user.isAllowed,
       isAdmin,
       requiresReauth,
+      requiresConsent: user.policyVersion !== CURRENT_POLICY_VERSION,
+      policyVersion: CURRENT_POLICY_VERSION,
       brandName: this.config.brandName,
     };
+  }
+
+  @Post('consent')
+  @HttpCode(204)
+  acceptConsent(
+    @Req() req: Request,
+    @Body() body: { version?: string },
+    @Res() res: Response
+  ): void {
+    const token = readCookie(req, SESSION_COOKIE);
+    if (!token) throw new UnauthorizedException();
+    const payload = this.auth.verifySessionToken(token);
+    if (!payload) throw new UnauthorizedException();
+    const user = this.users.findById(payload.uid);
+    if (!user) throw new UnauthorizedException();
+    if (body?.version !== CURRENT_POLICY_VERSION) {
+      throw new BadRequestException({
+        reason: 'STALE_POLICY_VERSION',
+        message: `expected version ${CURRENT_POLICY_VERSION}, got ${body?.version ?? 'null'}`,
+        currentVersion: CURRENT_POLICY_VERSION,
+      });
+    }
+    this.users.acceptPolicy(user.id, CURRENT_POLICY_VERSION);
+    this.users.audit({
+      actor: user.githubLogin,
+      action: 'POLICY_ACCEPT',
+      target: CURRENT_POLICY_VERSION,
+      reason: null,
+      metaJson: null,
+    });
+    res.send();
   }
 
   @Post('logout')
