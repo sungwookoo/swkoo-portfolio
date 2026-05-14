@@ -106,7 +106,7 @@
 | 2.9 | 사용자 마찰 묶음 (ApplicationSet refresh + 빌드 실패 운영자 알림 + Starter 템플릿) | ✅ | argocd ns Role로 refresh=hard 호출 → ~3분 폴링 갭 제거. 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 1회 알림. getting-started에 `sungwookoo/nextjs-sample` "Use this template" 버튼 |
 | 2.10 | 위생 패스 (운영자 품질 + 사업 전환 자리) | ✅ | `/admin` 승인대기 카운트 뱃지, no-op commit 감지(tree-sha 동일 시 skip), `getUserManifestPath` 헬퍼 추출, metadata.yaml에 `scanResult`/`writeBackMethod` 필드 자리, `/terms` `/privacy` 베타 스텁 |
 | 2.11 | Observatory per-viewer 가시성 (3-tier) + 헤더 user menu | ✅ | `OptionalJwtAuthGuard` + `viewer-scope` 헬퍼로 비로그인=operator만, 로그인=operator+본인, admin=전체+토글. 헤더 우상단 외부링크 제거 → user menu (avatar dropdown, 로그아웃 포함) |
-| 3.1 | per-tenant 매니페스트 repo 분리 | ⚠️ 코드 머지, 운영 마이그레이션 대기 | `swkoo-deploy` GitHub Org에 사용자별 private repo 생성. 백엔드: `ensureRepoInOrg`/`archiveRepo` 메서드, register/unregister 흐름이 deploy repo + 작은 registration 파일(`deploy/users/<login>.yaml`)로 분리. ApplicationSet generator는 `files: deploy/users/*.yaml`로 전환, source repoURL은 `{{ .deployRepo }}` 템플릿. 마이그레이션은 사용자 재배포 + `kubectl apply` ApplicationSet + ArgoCD repo-creds Secret 생성 |
+| 3.1 | per-tenant 매니페스트 repo 분리 | ✅ | `swkoo-deploy` GitHub Org에 사용자별 private repo 생성. 백엔드: `ensureRepoInOrg`/`archiveRepo` 메서드, register/unregister 흐름이 deploy repo + 작은 registration 파일(`deploy/users/<login>.yaml`)로 분리. ApplicationSet generator: `files: deploy/users/*.yaml`, source repoURL은 `{{ .deployRepo }}` 템플릿. 운영 마이그레이션 완료(2026-05-14): ArgoCD repo-creds Secret(GitHub App), 3명 사용자(hizieun/sungwookoo/sw-koo) JWT impersonation으로 register 재호출, 옛 dir 정리. 모두 Synced/Healthy, HTTP 200 |
 
 ---
 
@@ -151,4 +151,4 @@
 | 2026-05-06 | v0 초안 작성 |
 | 2026-05-08 | §10 추가 — BIZ_READINESS.md cross-link |
 | 2026-05-12 | Phase 2.10 (위생 패스) 추가 — §6 |
-| 2026-05-14 | Phase 1 종료 — §4 성공기준 외부 사용자 3명으로 검증. Phase 2.11 (Observatory per-viewer + user menu) 추가. Phase 3.1 (per-tenant repo split) 코드 머지. |
+| 2026-05-14 | Phase 1 종료 — §4 성공기준 외부 사용자 3명으로 검증. Phase 2.11 (Observatory per-viewer + user menu) 추가. Phase 3.1 (per-tenant repo split) 코드 머지 + 운영 마이그레이션 완료. |
