@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 
 import { loginUrl, logout, ME_SWR_KEY, useMe } from '@/lib/auth';
+import { deleteMyAccount, exportMyData } from '@/lib/account';
 import {
   CurrentDeployment,
   registerDeploy,
@@ -166,8 +167,170 @@ export function DeployPageClient(): JSX.Element {
         />
 
         {selectedRepo && <PreviewPanel fullName={selectedRepo} />}
+
+        <AccountSection login={me.githubLogin} />
       </div>
     </Shell>
+  );
+}
+
+function AccountSection({ login }: { login: string }): JSX.Element {
+  const router = useRouter();
+  const { mutate } = useSWRConfig();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
+
+  const handleExport = async (): Promise<void> => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await exportMyData(login);
+    } catch (err) {
+      setExportError((err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <section className="space-y-4 border-t border-slate-800 pt-8">
+      <header className="space-y-1">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-slate-500">
+          내 데이터
+        </p>
+        <p className="text-sm text-slate-400">
+          개인정보 처리방침에 따라 본인 데이터를 내보내거나 계정을 삭제할 수
+          있습니다. 자세한 내용은{' '}
+          <Link href="/privacy" className="text-slate-300 underline-offset-2 hover:underline">
+            개인정보 처리방침
+          </Link>{' '}
+          참조.
+        </p>
+      </header>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-900 disabled:opacity-50"
+        >
+          {exporting ? '내보내는 중…' : '내 데이터 내보내기 (JSON)'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowDelete(true)}
+          className="rounded-md border border-rose-900/60 bg-rose-950/30 px-4 py-2 text-sm text-rose-200 transition-colors hover:bg-rose-950/60"
+        >
+          계정 삭제…
+        </button>
+      </div>
+      {exportError && (
+        <p className="text-xs text-amber-400">내보내기 실패: {exportError}</p>
+      )}
+
+      {showDelete && (
+        <DeleteAccountModal
+          login={login}
+          onClose={() => setShowDelete(false)}
+          onDeleted={async () => {
+            await mutate(ME_SWR_KEY, null, { revalidate: false });
+            router.push('/');
+            router.refresh();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function DeleteAccountModal({
+  login,
+  onClose,
+  onDeleted,
+}: {
+  login: string;
+  onClose: () => void;
+  onDeleted: () => void | Promise<void>;
+}): JSX.Element {
+  const [typed, setTyped] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirmed = typed.trim() === login;
+
+  const handleDelete = async (): Promise<void> => {
+    if (!confirmed) return;
+    setPending(true);
+    setError(null);
+    try {
+      await deleteMyAccount();
+      await onDeleted();
+    } catch (err) {
+      setError((err as Error).message);
+      setPending(false);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !pending) onClose();
+      }}
+    >
+      <div className="w-full max-w-md space-y-4 rounded-md border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
+        <h2 className="text-lg font-semibold text-zinc-100">계정을 삭제하시겠어요?</h2>
+        <div className="space-y-2 text-sm text-zinc-400">
+          <p>다음 동작이 되돌릴 수 없게 실행됩니다.</p>
+          <ul className="list-disc space-y-1 pl-5 text-xs">
+            <li>현재 활성 배포 제거 (매니페스트 삭제 + ArgoCD prune)</li>
+            <li>매니페스트 repo 아카이브 (회복 가능, 30일 후 완전 삭제 대상)</li>
+            <li>사용자 record 익명화 (이름·이메일·아바타·토큰 즉시 삭제)</li>
+            <li>감사 로그는 익명화하여 30일 보존 후 완전 삭제</li>
+          </ul>
+          <p className="text-xs text-zinc-500">
+            GitHub repo 본체 + 컨테이너 이미지(GHCR)는 본인 GitHub 소유라 그대로 남습니다.
+          </p>
+        </div>
+        <label className="block space-y-1">
+          <span className="text-xs text-zinc-400">
+            확인을 위해 본인 로그인 이름{' '}
+            <code className="font-mono text-zinc-200">{login}</code> 을 입력하세요.
+          </span>
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            disabled={pending}
+            className="block w-full rounded border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none"
+            placeholder={login}
+            autoFocus
+          />
+        </label>
+        {error && <p className="text-xs text-amber-400">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="rounded-md px-3 py-2 text-sm text-zinc-400 transition-colors hover:text-zinc-100 disabled:opacity-50"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={!confirmed || pending}
+            className="rounded-md bg-rose-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {pending ? '삭제 중…' : '영구 삭제'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

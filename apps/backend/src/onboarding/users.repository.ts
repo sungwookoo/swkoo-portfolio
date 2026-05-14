@@ -90,6 +90,13 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     // Env still seeds initial state on boot via seedAllowlist(); after that
     // the /admin UI is the source of truth.
     this.addColumnIfMissing('users', 'is_allowed', 'INTEGER NOT NULL DEFAULT 0');
+    // Phase 3.2: account deletion (K-PIPA Art.36 / GDPR Art.17). Soft-deleted
+    // rows keep an anonymized shell — github_id flipped to -id (negative
+    // values can't collide with GitHub's positive IDs), github_login becomes
+    // "deleted_<id>" — so the NOT NULL UNIQUE constraints survive without
+    // making the row identifiable. A separate cron (TODO) hard-deletes rows
+    // older than 30 days per the privacy policy.
+    this.addColumnIfMissing('users', 'deleted_at', 'TEXT');
     this.logger.log('users + audit_log tables ready');
   }
 
@@ -135,7 +142,7 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
   findById(id: number): UserRow | undefined {
     const stmt = this.db.prepare(`
       SELECT ${this.userColumns}
-      FROM users WHERE id = ?
+      FROM users WHERE id = ? AND deleted_at IS NULL
     `);
     const row = stmt.get(id);
     return row ? this.hydrate(row) : undefined;
@@ -144,7 +151,7 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
   findByLogin(login: string): UserRow | undefined {
     const stmt = this.db.prepare(`
       SELECT ${this.userColumns}
-      FROM users WHERE github_login = ?
+      FROM users WHERE github_login = ? AND deleted_at IS NULL
     `);
     const row = stmt.get(login);
     return row ? this.hydrate(row) : undefined;
@@ -153,7 +160,7 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
   findByGithubId(githubId: number): UserRow | undefined {
     const stmt = this.db.prepare(`
       SELECT ${this.userColumns}
-      FROM users WHERE github_id = ?
+      FROM users WHERE github_id = ? AND deleted_at IS NULL
     `);
     const row = stmt.get(githubId);
     return row ? this.hydrate(row) : undefined;
@@ -163,9 +170,68 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
     const stmt = this.db.prepare(`
       SELECT ${this.userColumns}
       FROM users
+      WHERE deleted_at IS NULL
       ORDER BY last_login_at DESC
     `);
     return stmt.all().map((row) => this.hydrate(row));
+  }
+
+  /** K-PIPA Art.36 erasure: anonymize the row in place. Keeps the FK-like
+   * shape audit_log relies on (actor TEXT) but scrubs identifying fields.
+   * audit_log entries for this user get their actor rewritten to the same
+   * deleted_<id> placeholder. Hard delete after 30d is a separate job. */
+  softDeleteUser(id: number): void {
+    const tx = this.db.transaction((userId: number) => {
+      const placeholder = `deleted_${userId}`;
+      const row = this.db
+        .prepare(`SELECT github_login FROM users WHERE id = ?`)
+        .get(userId) as { github_login: string } | undefined;
+      if (!row) return;
+      this.db
+        .prepare(
+          `UPDATE audit_log SET actor = ? WHERE actor = ?`
+        )
+        .run(placeholder, row.github_login);
+      this.db
+        .prepare(
+          `UPDATE users SET
+             github_id     = -id,
+             github_login  = ?,
+             name          = NULL,
+             email         = NULL,
+             avatar_url    = NULL,
+             access_token  = NULL,
+             refresh_token = NULL,
+             token_expires_at = NULL,
+             is_allowed    = 0,
+             deleted_at    = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = ?`
+        )
+        .run(placeholder, userId);
+    });
+    tx(id);
+  }
+
+  /** Read audit entries authored by this user. Used for data export. */
+  listAuditByActor(actor: string): Array<{
+    at: string;
+    action: string;
+    target: string | null;
+    reason: string | null;
+    metaJson: string | null;
+  }> {
+    return this.db
+      .prepare(
+        `SELECT at, action, target, reason, meta_json AS metaJson
+         FROM audit_log WHERE actor = ? ORDER BY at DESC`
+      )
+      .all(actor) as Array<{
+      at: string;
+      action: string;
+      target: string | null;
+      reason: string | null;
+      metaJson: string | null;
+    }>;
   }
 
   /** Returns true if a user row exists for the login. The /admin UI surfaces

@@ -5,6 +5,7 @@ import { onboardingConfig } from '../config/onboarding.config';
 import { KubeModule } from '../kube/kube.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { PipelinesModule } from '../pipelines/pipelines.module';
+import { AccountController } from './account.controller';
 import { DeployController } from './deploy.controller';
 import { DeployService } from './deploy.service';
 import { EnvService } from './env.service';
@@ -17,7 +18,7 @@ import { GithubAppService } from './github-app.service';
     KubeModule,
     ConfigModule.forFeature(onboardingConfig),
   ],
-  controllers: [DeployController],
+  controllers: [DeployController, AccountController],
   providers: [DeployService, GithubAppService, EnvService],
   exports: [DeployService, GithubAppService, EnvService],
 })
