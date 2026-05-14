@@ -10,8 +10,10 @@ import { UsersRepository } from '../onboarding/users.repository';
 import { ArgoCdClient } from '../pipelines/services/argo-cd.client';
 import { GithubAppService } from './github-app.service';
 import {
-  getUserManifestPath,
-  renderManifestFiles,
+  getUserDeployRepoName,
+  getUserRegistrationPath,
+  renderDeployRepoFiles,
+  renderUserRegistration,
   renderUserRepoFiles,
   sanitizeName,
 } from './templates';
@@ -215,14 +217,16 @@ export class DeployService {
     };
   }
 
-  /** Allowlist-gated full registration: renders user-repo files (Dockerfile +
-   * workflow), commits them to the user's repo, then renders manifests and
-   * commits them to the manifest repo. ApplicationSet picks up the new
-   * metadata.yaml and deploys automatically.
+  /** Allowlist-gated full registration. Three commits, in order:
+   *   1. User source repo: Dockerfile + GHA workflow.
+   *   2. Per-user deploy repo (<deployOwner>/<login>, created if missing):
+   *      all k8s manifests at the repo root.
+   *   3. Control repo (swkoo-portfolio): a single registration file
+   *      deploy/users/<login>.yaml that the ApplicationSet `files`
+   *      generator reads to materialize the Application.
    *
-   * Re-running for the same user replaces their existing deploy/users/<login>/
-   * directory atomically (orphan files in old app subdirs are deleted in the
-   * same commit). Phase 1 caps one app per user. */
+   * Re-running for the same user overwrites stable-path files in place;
+   * the deploy repo persists across re-deploys. Phase 1 caps one app per user. */
   async registerForUser(userLogin: string, req: RegisterRequest): Promise<RegisterResponse> {
     // GitHub logins preserve case; k8s naming needs lowercase.
     const loginLc = userLogin.toLowerCase();
@@ -262,6 +266,8 @@ export class DeployService {
 
     const appName = sanitizeName(repo);
     const subdomain = sanitizeName(`${loginLc}-${appName}`, 53);
+    const deployRepoName = getUserDeployRepoName(loginLc);
+    const deployRepoFullName = `${this.config.deployOwner}/${deployRepoName}`;
     const params = {
       login: loginLc,
       appName,
@@ -269,12 +275,14 @@ export class DeployService {
       subdomain,
       port: preview.port,
       uid: 1000,
+      deployRepoFullName,
     };
 
     const userRepoFiles = renderUserRepoFiles(params);
-    const manifestFiles = renderManifestFiles(params);
+    const deployRepoFiles = renderDeployRepoFiles(params);
+    const registrationContent = renderUserRegistration(params);
 
-    // Commit to user repo (creates/updates Dockerfile + workflow).
+    // 1. Commit to user repo (creates/updates Dockerfile + workflow).
     let userRepoCommit: string;
     try {
       const userRepoToken = await this.githubApp.getInstallationTokenForRepo(owner, repo);
@@ -300,7 +308,38 @@ export class DeployService {
       throw err;
     }
 
-    // Commit manifests to swkoo-portfolio.
+    // 2. Ensure the per-user deploy repo exists (idempotent) and commit
+    //    manifests at its root.
+    let deployRepoCommit: string;
+    try {
+      const orgToken = await this.githubApp.getInstallationTokenForOrg(this.config.deployOwner);
+      await this.githubApp.ensureRepoInOrg({
+        org: this.config.deployOwner,
+        name: deployRepoName,
+        description: `swkoo.kr deploy manifests for ${loginLc}/${repo}. Managed by https://swkoo.kr/deploy — do not edit by hand.`,
+        token: orgToken,
+      });
+      deployRepoCommit = await this.githubApp.commitFilesAtomic({
+        owner: this.config.deployOwner,
+        repo: deployRepoName,
+        branch: 'main',
+        files: deployRepoFiles,
+        message: `feat: deploy ${appName}\n\nImage: ${params.imageRepo}:latest\nURL: https://${subdomain}.${this.config.appsDomain}`,
+        token: orgToken,
+      });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg.startsWith('INSTALLATION_NOT_FOUND')) {
+        throw new ForbiddenException({
+          reason: 'APP_NOT_INSTALLED_ON_DEPLOY_ORG',
+          message: `swkoo-deploy GitHub App이 ${this.config.deployOwner} org에 설치되어 있지 않습니다. 운영자에게 알려주세요.`,
+        });
+      }
+      throw err;
+    }
+
+    // 3. Commit the registration file to the control repo. ApplicationSet
+    //    will materialize an Application that pulls from the deploy repo.
     const [manifestOwner, manifestRepo] = this.config.manifestRepo.split('/');
     let manifestRepoCommit: string;
     try {
@@ -312,10 +351,9 @@ export class DeployService {
         owner: manifestOwner,
         repo: manifestRepo,
         branch: this.config.manifestBranch,
-        files: manifestFiles,
-        message: `feat(deploy): register ${loginLc}/${appName} via swkoo.kr/deploy\n\nUser: ${userLogin}\nApp: ${appName}\nImage: ${params.imageRepo}:latest\nURL: https://${subdomain}.${this.config.appsDomain}`,
+        files: { [getUserRegistrationPath(loginLc)]: registrationContent },
+        message: `feat(deploy): register ${loginLc}/${appName} via swkoo.kr/deploy\n\nUser: ${userLogin}\nApp: ${appName}\nDeployRepo: ${deployRepoFullName}\nURL: https://${subdomain}.${this.config.appsDomain}`,
         token: manifestToken,
-        replaceDirPath: getUserManifestPath(loginLc),
       });
     } catch (err) {
       const msg = (err as Error).message;
@@ -337,6 +375,8 @@ export class DeployService {
         subdomain,
         appName,
         userRepoCommit,
+        deployRepoFullName,
+        deployRepoCommit,
         manifestRepoCommit,
       }),
     });
@@ -357,33 +397,33 @@ export class DeployService {
   }
 
   /** Returns the user's currently-registered deployment, if any.
-   * Source-of-truth is the metadata.yaml in the manifest repo (git is
+   * Source-of-truth is deploy/users/<login>.yaml in the control repo (git is
    * authoritative); ArgoCD app data is layered in for sync/health/state.
-   * After a delete the metadata is gone immediately, but the ArgoCD app
-   * lingers ~1-3 min until ApplicationSet prunes it — that window is
+   * After a delete the registration file is gone immediately, but the ArgoCD
+   * app lingers ~1-3 min until ApplicationSet prunes it — that window is
    * exposed as state === 'deleting'. */
   async getCurrentDeployment(login: string): Promise<CurrentDeployment | null> {
     const loginLc = login.toLowerCase();
     const [manifestOwner, manifestRepoName] = this.config.manifestRepo.split('/');
 
-    const metadataContent = await this.readManifestFile(
+    const registrationContent = await this.readManifestFile(
       manifestOwner,
       manifestRepoName,
-      `${getUserManifestPath(loginLc)}/metadata.yaml`
+      getUserRegistrationPath(loginLc)
     );
     const app = await this.argo
       .getApplication(`swkoo-user-${loginLc}`)
       .catch(() => null);
 
-    if (!metadataContent && !app) {
+    if (!registrationContent && !app) {
       return null;
     }
 
-    // Derive repo from metadata if present; fall back to ArgoCD annotation
-    // (useful during the deleting window when metadata is already gone).
+    // Derive repo from the registration file if present; fall back to ArgoCD
+    // annotation (useful during the deleting window when the file is already gone).
     let userRepo: string | null = null;
-    if (metadataContent) {
-      const m = metadataContent.match(/repo:\s*ghcr\.io\/[^/]+\/(\S+)/);
+    if (registrationContent) {
+      const m = registrationContent.match(/repo:\s*ghcr\.io\/[^/]+\/(\S+)/);
       userRepo = m?.[1] ?? null;
     }
     if (!userRepo && app) {
@@ -395,7 +435,7 @@ export class DeployService {
 
     const appName = sanitizeName(userRepo);
     const subdomain = sanitizeName(`${loginLc}-${appName}`, 53);
-    const state: CurrentDeployment['state'] = metadataContent ? 'active' : 'deleting';
+    const state: CurrentDeployment['state'] = registrationContent ? 'active' : 'deleting';
 
     return {
       login: loginLc,
@@ -434,10 +474,12 @@ export class DeployService {
     }
   }
 
-  /** Atomic removal of the user's deploy/users/<login>/ directory in
-   * the manifest repo. ApplicationSet auto-prunes the matching Application
-   * on its next refresh (~3 min), cascading to namespace deletion. The
-   * user's source repo (Dockerfile + workflow + GHCR images) is untouched. */
+  /** Removes the user's registration file from the control repo and archives
+   * their deploy repo. ApplicationSet auto-prunes the matching Application on
+   * next refresh (~3 min, or sooner via refreshUsersApplicationSet), cascading
+   * to namespace deletion. The user's source repo (Dockerfile + workflow +
+   * GHCR images) is untouched; the archived deploy repo is recoverable from
+   * the GitHub UI. */
   async deleteDeployment(userLogin: string): Promise<{ commit: string }> {
     const loginLc = userLogin.toLowerCase();
     const user = this.users.findByLogin(userLogin);
@@ -455,7 +497,7 @@ export class DeployService {
         files: {},
         message: `feat(deploy): unregister ${loginLc} via swkoo.kr/deploy\n\nUser-initiated removal.`,
         token,
-        replaceDirPath: getUserManifestPath(loginLc),
+        deletePaths: [getUserRegistrationPath(loginLc)],
       });
     } catch (err) {
       const msg = (err as Error).message;
@@ -473,6 +515,20 @@ export class DeployService {
         });
       }
       throw err;
+    }
+
+    // Archive the deploy repo. Best-effort: log and continue if it fails —
+    // the registration file is already gone so the user view is consistent.
+    try {
+      const deployRepoName = getUserDeployRepoName(loginLc);
+      const orgToken = await this.githubApp.getInstallationTokenForOrg(this.config.deployOwner);
+      await this.githubApp.archiveRepo({
+        owner: this.config.deployOwner,
+        repo: deployRepoName,
+        token: orgToken,
+      });
+    } catch (err) {
+      this.logger.warn(`archiveRepo failed for ${loginLc}: ${(err as Error).message}`);
     }
 
     this.users.audit({
@@ -560,7 +616,7 @@ export class DeployService {
     try {
       const token = await this.githubApp.getInstallationTokenForRepo(owner, name);
       await axios.get(
-        `https://api.github.com/repos/${owner}/${name}/contents/${getUserManifestPath(login)}/metadata.yaml`,
+        `https://api.github.com/repos/${owner}/${name}/contents/${getUserRegistrationPath(login)}`,
         {
           headers: {
             Authorization: `token ${token}`,

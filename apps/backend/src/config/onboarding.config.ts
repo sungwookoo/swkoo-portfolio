@@ -25,9 +25,15 @@ export interface OnboardingConfig {
   // Discord webhook URL fired when a user's deploy GHA workflow fails.
   // Separate channel from signup so operator can route them differently.
   discordBuildFailureWebhookUrl: string | undefined;
-  // Where /api/deploy/register commits the rendered manifests.
+  // Control repo where /api/deploy/register writes a small per-user
+  // registration file (deploy/users/<login>.yaml) for ApplicationSet.
   manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
   manifestBranch: string;
+  // GitHub org that owns one private deploy repo per user
+  // (<deployOwner>/<login>). The org installation needs Administration:write
+  // for repo creation and per-repo Administration:write for archive on
+  // unregister.
+  deployOwner: string;
   appsDomain: string; // for subdomain construction, e.g. "apps.swkoo.kr"
 }
 
@@ -54,6 +60,7 @@ export const onboardingConfig = registerAs(
     discordBuildFailureWebhookUrl: process.env.DISCORD_BUILD_FAILURE_WEBHOOK_URL || undefined,
     manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-portfolio',
     manifestBranch: process.env.MANIFEST_BRANCH ?? 'main',
+    deployOwner: process.env.GITHUB_DEPLOY_OWNER ?? 'swkoo-deploy',
     appsDomain: process.env.APPS_DOMAIN ?? 'apps.swkoo.kr',
   })
 );

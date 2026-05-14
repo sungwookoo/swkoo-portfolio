@@ -130,6 +130,7 @@ Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 - [x] **T&C / Privacy Policy 페이지 자리** — Phase 2.10. `/terms` `/privacy` 베타 스텁 (운영자 본인 정체성 + 연락처). 일반 공개 시점에 확정 약관으로 교체
 - [x] **이미지 스캔 자리 확보**: Phase 2.10. metadata.yaml `image.scanResult: pending` 필드. webhook 구멍은 차후 Trivy 도입 시 채움
 - [x] **`writeBackMethod` 필드 자리** — Phase 2.10. metadata.yaml `image.writeBackMethod: argocd-image-updater` (현재값). 차후 git write-back으로 교체 가능
+- [x] **Observatory per-viewer 데이터 격리** — Phase 2.11. 3-tier 가시성(비로그인=operator만 / 로그인=operator+본인 / admin=전체). 유료 전환 시 multi-tenant SaaS의 기본 전제 충족 ([deploy-vision §6 2.11](./docs/deploy-vision.md))
 
 ---
 
@@ -162,3 +163,4 @@ Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손
 |------|------|
 | 2026-05-08 | 초안 작성 — Phase 2 빌드 직전, 사업전환 고려사항 외부 분리 |
 | 2026-05-12 | Phase 2.10 위생 패스 — §4 체크리스트 4개 항목 ✅ (manifest 경로 헬퍼, T&C/Privacy 스텁, scanResult/writeBackMethod 필드). §4a no-op commit ✅. |
+| 2026-05-14 | Phase 1 종료(친구 2명 + 본인 부계정 실배포 검증). Phase 2.11 — Observatory per-viewer 데이터 격리 §4 추가. |

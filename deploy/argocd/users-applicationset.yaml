@@ -1,8 +1,11 @@
-# Fans out deploy/users/<github-login>/metadata.yaml into one Application
-# per file. Onboarding a new friend = copy the template under
-# `docs/templates/user-manifests/` to `deploy/users/<login>/`, fill in the
-# substitutions (incl. metadata.yaml), push to main. ApplicationSet
-# notices and creates swkoo-user-<login> automatically.
+# Phase 3.1: fans out deploy/users/<login>.yaml (registration files) into
+# one Application per file. Each file points at a private deploy repo at
+# `swkoo-deploy/<login>` that holds the actual k8s manifests. Friend's
+# manifest data is no longer mixed into this (public) repo.
+#
+# Onboarding flow: swkoo.kr/deploy → backend creates swkoo-deploy/<login>,
+# commits manifests there, then writes deploy/users/<login>.yaml here.
+# ApplicationSet picks it up and materializes swkoo-user-<login>.
 #
 # Image Updater annotations on the template wire each Application up for
 # auto-redeploy when the friend's GHCR image gets a new digest. See
@@ -26,14 +29,14 @@ spec:
         repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
         revision: main
         files:
-          - path: deploy/users/*/metadata.yaml
+          - path: deploy/users/*.yaml
   template:
     metadata:
       name: 'swkoo-user-{{ .login }}'
       annotations:
         # Image Updater: track one image per friend, write back into the
         # Application spec (no git commit). Update strategy is per-friend
-        # via metadata.yaml.
+        # via the registration file.
         # `digest` strategy needs the tag in the image-list value itself
         # (allow-tags isn't enough). Phase 1 convention: friends tag `:latest`.
         argocd-image-updater.argoproj.io/image-list: 'app={{ .image.repo }}:latest'
@@ -49,9 +52,9 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+        repoURL: 'https://github.com/{{ .deployRepo }}.git'
         targetRevision: main
-        path: 'deploy/users/{{ .login }}'
+        path: .
       destination:
         server: https://kubernetes.default.svc
         namespace: 'user-{{ .login }}'

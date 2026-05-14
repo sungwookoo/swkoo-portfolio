@@ -40,11 +40,13 @@
 
 ## 4. 성공 기준 — Phase 1 완료의 정의
 
-1. 친구 1명의 GitHub repo가 등록되어 `git push` 만으로 자동 빌드 → 배포 → URL 노출 흐름 정상 동작.
-2. 사용자 namespace 격리 (NetworkPolicy egress 제한 + RBAC).
-3. 자원 한도 적용: 사용자당 CPU 0.5 / RAM 512MB / Pods 3 / PV 1GB.
-4. 본인 인프라(Observatory + 자체 앱) 영향 없음 — 격리 검증.
-5. 운영 비용 0원 유지 (Always Free 한도 안에서).
+1. 친구 1명의 GitHub repo가 등록되어 `git push` 만으로 자동 빌드 → 배포 → URL 노출 흐름 정상 동작. ✅ — 2026-05-14, 친구 2명 + 본인 부계정으로 Next.js 싱글페이지 배포 검증.
+2. 사용자 namespace 격리 (NetworkPolicy egress 제한 + RBAC). ✅
+3. 자원 한도 적용: 사용자당 CPU 0.5 / RAM 512MB / Pods 3 / PV 1GB. ✅
+4. 본인 인프라(Observatory + 자체 앱) 영향 없음 — 격리 검증. ✅
+5. 운영 비용 0원 유지 (Always Free 한도 안에서). ✅
+
+**Phase 1 종료** (2026-05-14). 이후 작업은 friend-only 안정화 운영 또는 사업화 검토 ([`/BIZ_READINESS.md`](../BIZ_READINESS.md) §5)로 분기.
 
 ---
 
@@ -92,7 +94,7 @@
 | 1.4 | ArgoCD ApplicationSet (deploy/users/* 자동) + sample sync | ✅ | `https://sample-hello.apps.swkoo.kr` HTTP 200 |
 | 1.5 | 사용자 GitHub Actions 빌드 템플릿 + onboarding 가이드 | ✅ | `docs/templates/friend-build-workflow.yml`, `docs/onboarding-friend.md` |
 | 1.5b | 친구 push 후 자동 sync trigger | ✅ | argocd-image-updater (digest 전략 + argocd write-back) — 수동 rollout 불필요 |
-| 1.6 | 친구 1명 실제 등록 + 검증 | ✅ (self-test) | sungwookoo 본인으로 검증, `sungwookoo-nextjs-sample.apps.swkoo.kr` 라이브 |
+| 1.6 | 친구 1명 실제 등록 + 검증 | ✅ | 2026-05-14, 외부 친구 2명 + 본인 부계정으로 Next.js 싱글페이지 배포 성공 (`<login>-<repo>.apps.swkoo.kr` 라이브) |
 | 2.1 | GitHub App OAuth 셀프 등록 (Sign in with GitHub) | ✅ | `/deploy` 진입 → GitHub OAuth → JWT 쿠키 세션 |
 | 2.2 | repo 목록 + 스택 자동 감지 | ✅ | `package.json` → Next.js 식별, 포트·이미지 경로·서브도메인 자동 결정 |
 | 2.3 | 사용자 repo 자동 commit (Dockerfile + GHA workflow) | ✅ | `github-app.service.ts` atomic blobs/trees/commits/refs |
@@ -103,6 +105,8 @@
 | 2.8 | 사용자 env 패널 (`/deploy/<login>/<repo>` 환경변수 섹션) | ✅ | 백엔드 `swkoo-backend` SA + per-namespace RBAC, k8s Secret upsert + Deployment annotation patch로 자동 재시작 |
 | 2.9 | 사용자 마찰 묶음 (ApplicationSet refresh + 빌드 실패 운영자 알림 + Starter 템플릿) | ✅ | argocd ns Role로 refresh=hard 호출 → ~3분 폴링 갭 제거. 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 1회 알림. getting-started에 `sungwookoo/nextjs-sample` "Use this template" 버튼 |
 | 2.10 | 위생 패스 (운영자 품질 + 사업 전환 자리) | ✅ | `/admin` 승인대기 카운트 뱃지, no-op commit 감지(tree-sha 동일 시 skip), `getUserManifestPath` 헬퍼 추출, metadata.yaml에 `scanResult`/`writeBackMethod` 필드 자리, `/terms` `/privacy` 베타 스텁 |
+| 2.11 | Observatory per-viewer 가시성 (3-tier) + 헤더 user menu | ✅ | `OptionalJwtAuthGuard` + `viewer-scope` 헬퍼로 비로그인=operator만, 로그인=operator+본인, admin=전체+토글. 헤더 우상단 외부링크 제거 → user menu (avatar dropdown, 로그아웃 포함) |
+| 3.1 | per-tenant 매니페스트 repo 분리 | ⚠️ 코드 머지, 운영 마이그레이션 대기 | `swkoo-deploy` GitHub Org에 사용자별 private repo 생성. 백엔드: `ensureRepoInOrg`/`archiveRepo` 메서드, register/unregister 흐름이 deploy repo + 작은 registration 파일(`deploy/users/<login>.yaml`)로 분리. ApplicationSet generator는 `files: deploy/users/*.yaml`로 전환, source repoURL은 `{{ .deployRepo }}` 템플릿. 마이그레이션은 사용자 재배포 + `kubectl apply` ApplicationSet + ArgoCD repo-creds Secret 생성 |
 
 ---
 
@@ -147,3 +151,4 @@
 | 2026-05-06 | v0 초안 작성 |
 | 2026-05-08 | §10 추가 — BIZ_READINESS.md cross-link |
 | 2026-05-12 | Phase 2.10 (위생 패스) 추가 — §6 |
+| 2026-05-14 | Phase 1 종료 — §4 성공기준 외부 사용자 3명으로 검증. Phase 2.11 (Observatory per-viewer + user menu) 추가. Phase 3.1 (per-tenant repo split) 코드 머지. |

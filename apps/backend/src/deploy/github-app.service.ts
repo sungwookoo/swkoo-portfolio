@@ -99,6 +99,31 @@ export class GithubAppService {
       }
       throw err;
     }
+    return this.mintInstallationToken(installationId);
+  }
+
+  /** Like getInstallationTokenForRepo but resolves the installation by org —
+   * used when we need to create a repo (no repo exists yet to anchor the
+   * lookup). The App must be installed on the org with Administration:write. */
+  async getInstallationTokenForOrg(org: string): Promise<string> {
+    let installationId: number;
+    try {
+      const resp = await axios.get<InstallationResp>(
+        `https://api.github.com/orgs/${org}/installation`,
+        { headers: this.appAuthHeaders }
+      );
+      installationId = resp.data.id;
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) {
+        throw new Error(`INSTALLATION_NOT_FOUND:org/${org}`);
+      }
+      throw err;
+    }
+    return this.mintInstallationToken(installationId);
+  }
+
+  private async mintInstallationToken(installationId: number): Promise<string> {
     const tokenResp = await axios.post<InstallationTokenResp>(
       `https://api.github.com/app/installations/${installationId}/access_tokens`,
       {},
@@ -107,9 +132,63 @@ export class GithubAppService {
     return tokenResp.data.token;
   }
 
+  /** Creates `<org>/<name>` (private, auto-initialized with a README) if it
+   * doesn't already exist. Idempotent — returns silently when the repo is
+   * already there. Used on register to ensure a per-user deploy repo. */
+  async ensureRepoInOrg(args: {
+    org: string;
+    name: string;
+    description: string;
+    token: string;
+  }): Promise<void> {
+    const { org, name, description, token } = args;
+    const headers = this.installationAuthHeaders(token);
+    try {
+      await axios.get(`https://api.github.com/repos/${org}/${name}`, { headers });
+      return;
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status !== 404) throw err;
+    }
+    await axios.post(
+      `https://api.github.com/orgs/${org}/repos`,
+      {
+        name,
+        description,
+        private: true,
+        auto_init: true,
+        has_issues: false,
+        has_projects: false,
+        has_wiki: false,
+      },
+      { headers }
+    );
+    this.logger.log(`created deploy repo ${org}/${name}`);
+  }
+
+  /** Archives a repo (read-only, recoverable from GitHub UI). Used on
+   * unregister so the manifests aren't lost outright — operator can
+   * unarchive or delete later. */
+  async archiveRepo(args: { owner: string; repo: string; token: string }): Promise<void> {
+    const { owner, repo, token } = args;
+    try {
+      await axios.patch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { archived: true },
+        { headers: this.installationAuthHeaders(token) }
+      );
+      this.logger.log(`archived deploy repo ${owner}/${repo}`);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) return; // already gone — fine
+      throw err;
+    }
+  }
+
   /** Atomic multi-file commit using the Git Data API. If `replaceDirPath` is
    * set, files under that directory not present in `files` are deleted in the
-   * same commit (so re-deploys leave no orphans). Returns the new commit sha. */
+   * same commit (so re-deploys leave no orphans). `deletePaths` removes
+   * specific files outright. Returns the new commit sha. */
   async commitFilesAtomic(args: {
     owner: string;
     repo: string;
@@ -118,8 +197,9 @@ export class GithubAppService {
     message: string;
     token: string;
     replaceDirPath?: string;
+    deletePaths?: string[];
   }): Promise<string> {
-    const { owner, repo, branch, files, message, token, replaceDirPath } = args;
+    const { owner, repo, branch, files, message, token, replaceDirPath, deletePaths } = args;
     const headers = this.installationAuthHeaders(token);
 
     const refResp = await axios.get<GitRefResp>(
@@ -153,6 +233,13 @@ export class GithubAppService {
             type: 'blob',
             sha: null,
           });
+        }
+      }
+    }
+    if (deletePaths) {
+      for (const path of deletePaths) {
+        if (!newPaths.has(path)) {
+          deletions.push({ path, mode: '100644', type: 'blob', sha: null });
         }
       }
     }
