@@ -56,7 +56,7 @@ function Hero(): JSX.Element {
       <div className="mx-auto grid w-full max-w-6xl grid-cols-12 gap-y-12 lg:gap-x-8">
         {/* Left: copy */}
         <div className="col-span-12 flex flex-col items-start gap-8 lg:col-span-8">
-          <h1 className="display-tight display-gradient max-w-3xl whitespace-pre-line text-balance text-left text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-7xl">
+          <h1 className="display-tight max-w-3xl whitespace-pre-line text-balance text-left text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
             <AnimatedLines text={hero.title} startDelay={80} step={120} />
           </h1>
 
@@ -129,7 +129,7 @@ function AnimatedLines({
       {lines.map((line, i) => (
         <span
           key={i}
-          className="animate-fade-in-up block"
+          className="animate-fade-in-up display-gradient block"
           style={{ animationDelay: `${startDelay + i * step}ms` }}
         >
           {line}
