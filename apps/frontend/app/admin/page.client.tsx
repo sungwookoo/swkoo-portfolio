@@ -70,9 +70,20 @@ function UsersTable(): JSX.Element {
     return <p className="text-zinc-500">아직 OAuth로 사인인한 사용자가 없습니다.</p>;
   }
 
+  const pendingCount = users.filter((u) => !u.isAllowed).length;
+
   return (
-    <div className="overflow-x-auto rounded-md border border-zinc-900">
-      <table className="w-full text-left text-sm">
+    <div className="space-y-3">
+      {pendingCount > 0 && (
+        <div className="inline-flex items-center gap-2 rounded-md border border-amber-700/40 bg-amber-500/5 px-3 py-1.5">
+          <span className="size-1.5 rounded-full bg-amber-400" />
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-amber-200">
+            승인 대기 {pendingCount}명
+          </span>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-md border border-zinc-900">
+        <table className="w-full text-left text-sm">
         <thead className="border-b border-zinc-900 bg-zinc-950 text-xs uppercase tracking-wider text-zinc-500">
           <tr>
             <th className="px-4 py-3 font-medium">사용자</th>
@@ -87,6 +98,7 @@ function UsersTable(): JSX.Element {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

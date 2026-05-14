@@ -123,13 +123,13 @@ Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 - [x] **GitHub App** (OAuth App 아님) — `github-app.service.ts` (JWT RS256 + installation token)
 - [x] **사용자 record DB**: OAuth 통과한 모든 사용자 기록 (allowlist 통과 전부터) — `users` 테이블 (Phase 2.7부터 `is_allowed` 컬럼 추가, env는 시드 전용)
 - [x] **백엔드 git author** 명시 분리 — `swkoo.kr deploy bot <bot@swkoo.kr>` (`github-app.service.ts:39`)
-- [ ] **manifest 경로 함수 추상화** (`getUserManifestPath(login)`) — 현재 `deploy/users/${loginLc}` 다섯 군데에서 hardcoded. 차후 per-tenant repo 분리 시 한 곳만 수정하도록 추출
+- [x] **manifest 경로 함수 추상화** (`getUserManifestPath(login)`) — Phase 2.10. `templates.ts` 에 헬퍼 추출, 5 군데 호출부 일괄 교체. 차후 per-tenant repo 분리 시 한 곳만 수정
 - [x] **사용자 액션 이벤트 로그** — `audit_log` 테이블 + `users.audit()` (deploy.service / auth.service 7 곳에서 기록)
 - [x] **에러 응답 `reason` 코드** — `BETA_ALLOWLIST`, `STACK_UNSUPPORTED`, `NO_USER`, `INVALID_REPO`, `APP_NOT_INSTALLED_*`, `NO_EXISTING_DEPLOYMENT`. Phase 2.7에서 `BETA_ALLOWLIST` → `NOT_ALLOWED` 으로 이름 변경
 - [x] **`BRAND_NAME` 환경변수** — `onboarding.config.ts:29`, `/me` 응답에 포함
-- [ ] **T&C / Privacy Policy 페이지 자리** — 빈 페이지라도 OAuth 동의 직후 노출
-- [ ] **이미지 스캔 자리 확보**: `imageScanResult` 필드를 metadata.yaml에 미리 두고 webhook 구멍만 비워둠
-- [ ] **`writeBackMethod` 필드 자리** (현재 `argocd`, 차후 `git`)
+- [x] **T&C / Privacy Policy 페이지 자리** — Phase 2.10. `/terms` `/privacy` 베타 스텁 (운영자 본인 정체성 + 연락처). 일반 공개 시점에 확정 약관으로 교체
+- [x] **이미지 스캔 자리 확보**: Phase 2.10. metadata.yaml `image.scanResult: pending` 필드. webhook 구멍은 차후 Trivy 도입 시 채움
+- [x] **`writeBackMethod` 필드 자리** — Phase 2.10. metadata.yaml `image.writeBackMethod: argocd-image-updater` (현재값). 차후 git write-back으로 교체 가능
 
 ---
 
@@ -138,7 +138,7 @@ Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손볼 만한 소규모 UX 항목:
 
 - ~~**ApplicationSet 강제 refresh on register/delete**~~ — ✅ Phase 2.9. 백엔드 `swkoo-backend` SA + `deploy/argocd/swkoo-backend-applicationset-rbac.yaml` Role로 register/delete 끝에 `argocd.argoproj.io/refresh=hard` patch 호출.
-- **Re-deploy 시 user repo no-op 감지** — 동일 사용자가 동일 repo로 재배포하면 백엔드가 Dockerfile/workflow를 매번 commit합니다. 내용이 byte-identical일 때 commit 건너뛰면 git history 노이즈 감소 + GHA 빌드 사이클 절약.
+- ~~**Re-deploy 시 user repo no-op 감지**~~ — ✅ Phase 2.10. `commitFilesAtomic`이 새 tree-sha가 base와 동일하면 commit/ref-patch 건너뜀 (GitHub blob dedupe 활용). git history 노이즈 + GHA 빌드 사이클 절약.
 - ~~**Build 실패 시 명시적 알림**~~ — ✅ Phase 2.9 (운영자 한정). 진행도 페이지 폴링이 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 한 번만 알림. 사용자 직접 알림 채널은 별도 작업.
 
 ---
@@ -161,3 +161,4 @@ Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손
 | 날짜 | 작업 |
 |------|------|
 | 2026-05-08 | 초안 작성 — Phase 2 빌드 직전, 사업전환 고려사항 외부 분리 |
+| 2026-05-12 | Phase 2.10 위생 패스 — §4 체크리스트 4개 항목 ✅ (manifest 경로 헬퍼, T&C/Privacy 스텁, scanResult/writeBackMethod 필드). §4a no-op commit ✅. |

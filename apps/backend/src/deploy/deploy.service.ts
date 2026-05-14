@@ -10,6 +10,7 @@ import { UsersRepository } from '../onboarding/users.repository';
 import { ArgoCdClient } from '../pipelines/services/argo-cd.client';
 import { GithubAppService } from './github-app.service';
 import {
+  getUserManifestPath,
   renderManifestFiles,
   renderUserRepoFiles,
   sanitizeName,
@@ -314,7 +315,7 @@ export class DeployService {
         files: manifestFiles,
         message: `feat(deploy): register ${loginLc}/${appName} via swkoo.kr/deploy\n\nUser: ${userLogin}\nApp: ${appName}\nImage: ${params.imageRepo}:latest\nURL: https://${subdomain}.${this.config.appsDomain}`,
         token: manifestToken,
-        replaceDirPath: `deploy/users/${loginLc}`,
+        replaceDirPath: getUserManifestPath(loginLc),
       });
     } catch (err) {
       const msg = (err as Error).message;
@@ -368,7 +369,7 @@ export class DeployService {
     const metadataContent = await this.readManifestFile(
       manifestOwner,
       manifestRepoName,
-      `deploy/users/${loginLc}/metadata.yaml`
+      `${getUserManifestPath(loginLc)}/metadata.yaml`
     );
     const app = await this.argo
       .getApplication(`swkoo-user-${loginLc}`)
@@ -454,7 +455,7 @@ export class DeployService {
         files: {},
         message: `feat(deploy): unregister ${loginLc} via swkoo.kr/deploy\n\nUser-initiated removal.`,
         token,
-        replaceDirPath: `deploy/users/${loginLc}`,
+        replaceDirPath: getUserManifestPath(loginLc),
       });
     } catch (err) {
       const msg = (err as Error).message;
@@ -559,7 +560,7 @@ export class DeployService {
     try {
       const token = await this.githubApp.getInstallationTokenForRepo(owner, name);
       await axios.get(
-        `https://api.github.com/repos/${owner}/${name}/contents/deploy/users/${login}/metadata.yaml`,
+        `https://api.github.com/repos/${owner}/${name}/contents/${getUserManifestPath(login)}/metadata.yaml`,
         {
           headers: {
             Authorization: `token ${token}`,

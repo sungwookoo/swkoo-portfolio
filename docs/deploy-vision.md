@@ -102,6 +102,7 @@
 | 2.7 | 관리자 페이지 v0 (allowlist DB 이관 + `/admin` UI) | ✅ | `ADMIN_LOGINS` env로 게이팅, `users.is_allowed` 토글, audit_log 기록 |
 | 2.8 | 사용자 env 패널 (`/deploy/<login>/<repo>` 환경변수 섹션) | ✅ | 백엔드 `swkoo-backend` SA + per-namespace RBAC, k8s Secret upsert + Deployment annotation patch로 자동 재시작 |
 | 2.9 | 사용자 마찰 묶음 (ApplicationSet refresh + 빌드 실패 운영자 알림 + Starter 템플릿) | ✅ | argocd ns Role로 refresh=hard 호출 → ~3분 폴링 갭 제거. 빌드 'failed' 감지 시 `DISCORD_BUILD_FAILURE_WEBHOOK_URL`로 1회 알림. getting-started에 `sungwookoo/nextjs-sample` "Use this template" 버튼 |
+| 2.10 | 위생 패스 (운영자 품질 + 사업 전환 자리) | ✅ | `/admin` 승인대기 카운트 뱃지, no-op commit 감지(tree-sha 동일 시 skip), `getUserManifestPath` 헬퍼 추출, metadata.yaml에 `scanResult`/`writeBackMethod` 필드 자리, `/terms` `/privacy` 베타 스텁 |
 
 ---
 
@@ -145,3 +146,4 @@
 |------|------|
 | 2026-05-06 | v0 초안 작성 |
 | 2026-05-08 | §10 추가 — BIZ_READINESS.md cross-link |
+| 2026-05-12 | Phase 2.10 (위생 패스) 추가 — §6 |

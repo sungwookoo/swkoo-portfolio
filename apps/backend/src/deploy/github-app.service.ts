@@ -182,6 +182,13 @@ export class GithubAppService {
       { headers }
     );
 
+    if (newTreeResp.data.sha === baseTreeSha) {
+      this.logger.log(
+        `no-op commit skipped for ${owner}/${repo}@${branch} (tree unchanged) — ${message}`
+      );
+      return baseCommitSha;
+    }
+
     const newCommitResp = await axios.post<{ sha: string }>(
       `https://api.github.com/repos/${owner}/${repo}/git/commits`,
       {
