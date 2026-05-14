@@ -72,18 +72,22 @@ export class AuthService implements OnApplicationBootstrap {
   }
 
   /**
-   * Builds the GitHub App install URL with a CSRF state. Because the App has
-   * "Request user authorization (OAuth) during installation" enabled, GitHub
-   * combines install + OAuth into a single user-facing flow and redirects
-   * back to the Setup URL (= our /auth/github/callback) with both
-   * `installation_id` and `code` + `state` in the query.
+   * Builds the GitHub OAuth authorize URL. Pure OAuth (not the App install
+   * URL) so returning users — who already have swkoo-deploy installed on at
+   * least one repo — get straight back through sign-in instead of being
+   * bounced to the installation settings page. New users still sign in here
+   * and then get prompted to install the App at deploy time when the
+   * APP_NOT_INSTALLED_ON_USER_REPO error surfaces in /deploy.
    */
   buildAuthorizeUrl(state: string): string {
-    if (!this.config.githubAppSlug) {
-      throw new Error('GITHUB_APP_SLUG not configured');
+    if (!this.config.githubAppClientId) {
+      throw new Error('GITHUB_APP_CLIENT_ID not configured');
     }
-    const params = new URLSearchParams({ state });
-    return `https://github.com/apps/${this.config.githubAppSlug}/installations/new?${params.toString()}`;
+    const params = new URLSearchParams({
+      client_id: this.config.githubAppClientId,
+      state,
+    });
+    return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }
 
   async exchangeCodeForUser(code: string): Promise<UserRow> {
