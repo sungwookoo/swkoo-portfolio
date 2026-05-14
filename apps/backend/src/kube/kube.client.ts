@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { AppsV1Api, CoreV1Api, CustomObjectsApi, KubeConfig } from '@kubernetes/client-node';
+import { AppsV1Api, BatchV1Api, CoreV1Api, CustomObjectsApi, KubeConfig } from '@kubernetes/client-node';
 
 /**
  * Thin wrapper around @kubernetes/client-node. Loads the in-cluster
@@ -14,6 +14,7 @@ export class KubeClient implements OnModuleInit {
   core?: CoreV1Api;
   apps?: AppsV1Api;
   custom?: CustomObjectsApi;
+  batch?: BatchV1Api;
 
   onModuleInit(): void {
     try {
@@ -22,16 +23,17 @@ export class KubeClient implements OnModuleInit {
       this.core = kc.makeApiClient(CoreV1Api);
       this.apps = kc.makeApiClient(AppsV1Api);
       this.custom = kc.makeApiClient(CustomObjectsApi);
+      this.batch = kc.makeApiClient(BatchV1Api);
       this.logger.log('Loaded in-cluster KubeConfig');
     } catch (err) {
       this.logger.warn(
         `In-cluster KubeConfig unavailable (${(err as Error).message}). ` +
-          'EnvService and AppSet refresh will be no-ops until backend runs inside the cluster.'
+          'EnvService, AppSet refresh, and scan dispatch will be no-ops until backend runs inside the cluster.'
       );
     }
   }
 
   available(): boolean {
-    return Boolean(this.core && this.apps && this.custom);
+    return Boolean(this.core && this.apps && this.custom && this.batch);
   }
 }

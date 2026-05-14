@@ -45,6 +45,7 @@ export class AccountController {
       }
     }
     const auditLog = this.users.listAuditByActor(user.githubLogin);
+    const latestScan = this.users.latestScanResultForUser(user.id);
     return {
       exportedAt: new Date().toISOString(),
       user: {
@@ -59,6 +60,7 @@ export class AccountController {
       },
       deployment,
       envVars,
+      latestScan,
       auditLog,
     };
   }

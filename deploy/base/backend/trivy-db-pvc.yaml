@@ -1,0 +1,19 @@
+# Shared volume for Trivy's vulnerability DB across scan Jobs. Without
+# this, each Job pod re-downloads the ~50MB DB on cold start. RWO is fine
+# because Jobs run sequentially (one scan at a time per the daily cron)
+# and the cluster is single-node.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trivy-db-cache
+  namespace: swkoo
+  labels:
+    app: swkoo-backend
+    swkoo.kr/role: scan-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

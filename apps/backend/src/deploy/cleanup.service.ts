@@ -5,6 +5,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { onboardingConfig } from '../config/onboarding.config';
 import { UsersRepository } from '../onboarding/users.repository';
 import { GithubAppService } from './github-app.service';
+import { ScanService } from './scan.service';
 
 const RETENTION_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -29,6 +30,7 @@ export class CleanupService {
   constructor(
     private readonly users: UsersRepository,
     private readonly githubApp: GithubAppService,
+    private readonly scan: ScanService,
     @Inject(onboardingConfig.KEY)
     private readonly config: ConfigType<typeof onboardingConfig>
   ) {}
@@ -38,9 +40,10 @@ export class CleanupService {
   // fine — one replica and a short user list.
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async runDailyCleanup(): Promise<void> {
-    this.logger.log('cleanup cron tick');
+    this.logger.log('daily housekeeping cron tick');
     await this.cleanupSoftDeletedUsers();
     await this.cleanupArchivedDeployRepos();
+    await this.scan.scanAllActiveUsers();
   }
 
   /** Public for tests / manual triggering. */

@@ -8,6 +8,7 @@ resources:
   - backend/service.yaml
   - backend/ingress.yaml
   - backend/pvc.yaml
+  - backend/trivy-db-pvc.yaml
   - frontend/deployment.yaml
   - frontend/service.yaml
   - frontend/ingress.yaml

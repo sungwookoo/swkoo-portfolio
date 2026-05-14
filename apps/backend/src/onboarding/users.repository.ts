@@ -45,6 +45,26 @@ export interface AuditLogInsert {
   metaJson: string | null;
 }
 
+export interface ScanResultInsert {
+  userId: number;
+  image: string;
+  critical: number;
+  high: number;
+  medium: number;
+  trivyVersion: string | null;
+}
+
+export interface ScanResultRow {
+  id: number;
+  userId: number;
+  image: string;
+  critical: number;
+  high: number;
+  medium: number;
+  scannedAt: string;
+  trivyVersion: string | null;
+}
+
 @Injectable()
 export class UsersRepository implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UsersRepository.name);
@@ -81,6 +101,18 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
       );
       CREATE INDEX IF NOT EXISTS idx_audit_log_actor_at ON audit_log (actor, at DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_log_action_at ON audit_log (action, at DESC);
+      CREATE TABLE IF NOT EXISTS scan_results (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id       INTEGER NOT NULL,
+        image         TEXT    NOT NULL,
+        critical      INTEGER NOT NULL DEFAULT 0,
+        high          INTEGER NOT NULL DEFAULT 0,
+        medium        INTEGER NOT NULL DEFAULT 0,
+        scanned_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        trivy_version TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_scan_results_user_at
+        ON scan_results (user_id, scanned_at DESC);
     `);
     // Idempotent column adds (SQLite has no "ADD COLUMN IF NOT EXISTS").
     // GitHub App user tokens expire (8h by default); we refresh on demand.
@@ -229,6 +261,27 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
          WHERE id = ?`
       )
       .run(version, userId);
+  }
+
+  insertScanResult(entry: ScanResultInsert): void {
+    this.db
+      .prepare(
+        `INSERT INTO scan_results (user_id, image, critical, high, medium, trivy_version)
+         VALUES (@userId, @image, @critical, @high, @medium, @trivyVersion)`
+      )
+      .run(entry);
+  }
+
+  latestScanResultForUser(userId: number): ScanResultRow | null {
+    const row = this.db
+      .prepare(
+        `SELECT id, user_id AS userId, image, critical, high, medium,
+                scanned_at AS scannedAt, trivy_version AS trivyVersion
+         FROM scan_results WHERE user_id = ?
+         ORDER BY scanned_at DESC LIMIT 1`
+      )
+      .get(userId) as ScanResultRow | undefined;
+    return row ?? null;
   }
 
   /** Hard-deletes soft-deleted users whose deleted_at is older than the

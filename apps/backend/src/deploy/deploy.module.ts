@@ -11,6 +11,7 @@ import { DeployController } from './deploy.controller';
 import { DeployService } from './deploy.service';
 import { EnvService } from './env.service';
 import { GithubAppService } from './github-app.service';
+import { ScanService } from './scan.service';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { GithubAppService } from './github-app.service';
     ConfigModule.forFeature(onboardingConfig),
   ],
   controllers: [DeployController, AccountController],
-  providers: [DeployService, GithubAppService, EnvService, CleanupService],
+  providers: [DeployService, GithubAppService, EnvService, CleanupService, ScanService],
   exports: [DeployService, GithubAppService, EnvService],
 })
 export class DeployModule {}

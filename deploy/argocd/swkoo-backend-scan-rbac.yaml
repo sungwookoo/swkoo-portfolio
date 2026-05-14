@@ -1,0 +1,36 @@
+# Lets swkoo-backend SA dispatch Trivy scan Jobs and read their logs.
+# Jobs run in the swkoo namespace (same as backend) so they share the
+# trivy-db-cache PVC. Pods/log is needed because we extract Trivy's JSON
+# output by reading the completed pod's logs.
+#
+# Apply once with:
+#   kubectl apply -f deploy/argocd/swkoo-backend-scan-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swkoo-backend-scan-jobs
+  namespace: swkoo
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swkoo-backend-scan-jobs
+  namespace: swkoo
+subjects:
+  - kind: ServiceAccount
+    name: swkoo-backend
+    namespace: swkoo
+roleRef:
+  kind: Role
+  name: swkoo-backend-scan-jobs
+  apiGroup: rbac.authorization.k8s.io
