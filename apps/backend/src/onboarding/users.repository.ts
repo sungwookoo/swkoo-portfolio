@@ -231,6 +231,27 @@ export class UsersRepository implements OnModuleInit, OnModuleDestroy {
       .run(version, userId);
   }
 
+  /** Hard-deletes soft-deleted users whose deleted_at is older than the
+   * cutoff, along with their anonymized audit_log rows. Used by the daily
+   * cleanup cron to enforce the 30-day retention promised in the privacy
+   * policy. Returns the number of users hard-deleted. */
+  hardDeleteOldUsers(cutoffIso: string): number {
+    const tx = this.db.transaction((cutoff: string) => {
+      const rows = this.db
+        .prepare(`SELECT id FROM users WHERE deleted_at IS NOT NULL AND deleted_at < ?`)
+        .all(cutoff) as Array<{ id: number }>;
+      if (rows.length === 0) return 0;
+      const deletePlaceholders = rows.map((r) => `deleted_${r.id}`);
+      const ph = deletePlaceholders.map(() => '?').join(',');
+      this.db.prepare(`DELETE FROM audit_log WHERE actor IN (${ph})`).run(...deletePlaceholders);
+      this.db
+        .prepare(`DELETE FROM users WHERE deleted_at IS NOT NULL AND deleted_at < ?`)
+        .run(cutoff);
+      return rows.length;
+    });
+    return tx(cutoffIso);
+  }
+
   /** Read audit entries authored by this user. Used for data export. */
   listAuditByActor(actor: string): Array<{
     at: string;

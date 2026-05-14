@@ -179,6 +179,49 @@ export class GithubAppService {
     this.logger.log(`created deploy repo ${org}/${name}`);
   }
 
+  /** Lists archived repos under an org along with their archive timestamp.
+   * GitHub's repo listing exposes `archived` and `updated_at` — the latter
+   * approximates "archived at" for our purposes (we never touch archived
+   * repos, so updated_at is when we archived them). */
+  async listArchivedRepos(
+    org: string,
+    token: string
+  ): Promise<Array<{ name: string; archivedSinceIso: string }>> {
+    const headers = this.installationAuthHeaders(token);
+    const out: Array<{ name: string; archivedSinceIso: string }> = [];
+    let page = 1;
+    while (true) {
+      const resp = await axios.get<
+        Array<{ name: string; archived: boolean; updated_at: string }>
+      >(`https://api.github.com/orgs/${org}/repos`, {
+        headers,
+        params: { per_page: 100, page, type: 'private' },
+      });
+      for (const r of resp.data) {
+        if (r.archived) out.push({ name: r.name, archivedSinceIso: r.updated_at });
+      }
+      if (resp.data.length < 100) break;
+      page += 1;
+    }
+    return out;
+  }
+
+  /** Hard-deletes a repo. No going back. Used by the cleanup cron after
+   * the 30-day archive retention window expires. */
+  async deleteRepo(args: { owner: string; repo: string; token: string }): Promise<void> {
+    const { owner, repo, token } = args;
+    try {
+      await axios.delete(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: this.installationAuthHeaders(token),
+      });
+      this.logger.log(`hard-deleted deploy repo ${owner}/${repo}`);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) return;
+      throw err;
+    }
+  }
+
   /** Archives a repo (read-only, recoverable from GitHub UI). Used on
    * unregister so the manifests aren't lost outright — operator can
    * unarchive or delete later. */

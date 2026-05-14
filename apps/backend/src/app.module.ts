@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { alertmanagerConfig } from './config/alertmanager.config';
 import { githubConfig } from './config/github.config';
@@ -24,6 +25,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       cache: true,
       load: [pipelinesConfig, githubConfig, alertmanagerConfig, webhooksConfig, onboardingConfig]
     }),
+    ScheduleModule.forRoot(),
     PipelinesModule,
     AlertsModule,
     MetricsModule,
