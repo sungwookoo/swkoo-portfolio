@@ -19,7 +19,7 @@ spec:
         - name: ocir-credentials
       containers:
         - name: frontend
-          image: nrt.ocir.io/nrznn4yiltsz/swkoo/frontend:62915a5935833d1e0d0e2bfda04643dbcea9508e
+          image: nrt.ocir.io/nrznn4yiltsz/swkoo/frontend:fcc3bf8e3bcafa7f5b207813196001cc97f72e8c
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
