@@ -133,8 +133,10 @@ export class GithubAppService {
   }
 
   /** Creates `<org>/<name>` (private, auto-initialized with a README) if it
-   * doesn't already exist. Idempotent — returns silently when the repo is
-   * already there. Used on register to ensure a per-user deploy repo. */
+   * doesn't already exist. Idempotent: if the repo is already there but
+   * archived (which is the state we leave it in on unregister), unarchives
+   * it so subsequent write calls don't 403. Used on register to ensure a
+   * per-user deploy repo. */
   async ensureRepoInOrg(args: {
     org: string;
     name: string;
@@ -144,7 +146,18 @@ export class GithubAppService {
     const { org, name, description, token } = args;
     const headers = this.installationAuthHeaders(token);
     try {
-      await axios.get(`https://api.github.com/repos/${org}/${name}`, { headers });
+      const resp = await axios.get<{ archived?: boolean }>(
+        `https://api.github.com/repos/${org}/${name}`,
+        { headers }
+      );
+      if (resp.data.archived) {
+        await axios.patch(
+          `https://api.github.com/repos/${org}/${name}`,
+          { archived: false },
+          { headers }
+        );
+        this.logger.log(`unarchived deploy repo ${org}/${name} (was archived from a prior unregister)`);
+      }
       return;
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
