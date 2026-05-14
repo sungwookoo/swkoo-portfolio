@@ -28,8 +28,8 @@ const sections = [
   },
   {
     n: 4,
-    title: 'v0 제약 — 미리 알아두실 것',
-    body: '현재 단계에서 지원하는/지원하지 않는 항목:',
+    title: '지원 범위 — 미리 알아두실 것',
+    body: '지원하는/지원하지 않는 항목:',
     bullets: [
       '런타임 환경변수 ✅ — 배포 후 `/deploy/<login>/<repo>` 페이지의 "환경변수" 패널에서 추가. Save 시 Pod 자동 재시작',
       '클러스터 내 영속 스토리지 ❌ — Supabase·Neon 같은 외부 DB 연결은 자유 (위의 환경변수로 URL/key 주입)',
@@ -41,8 +41,9 @@ const sections = [
     title: 'Deploy 클릭 시 자동으로 일어나는 일',
     body: '아래 작업을 백엔드가 대신 처리합니다 — 사용자가 만들거나 만질 필요 없음:',
     bullets: [
-      '본인 repo에 `Dockerfile` + `.github/workflows/swkoo-build.yml` atomic commit',
-      '운영 repo (`swkoo-portfolio`)에 사용자 namespace · ResourceQuota · NetworkPolicy · Deployment · Service · Ingress 매니페스트 commit',
+      '본인 repo에 `Dockerfile` + `.github/workflows/build.yml` atomic commit',
+      '사용자 전용 private repo `swkoo-deploy/<login>` 생성 후 namespace · ResourceQuota · NetworkPolicy · Deployment · Service · Ingress 매니페스트 commit',
+      '운영 repo (`swkoo-portfolio`)에 작은 registration 메타 파일 commit (ArgoCD ApplicationSet 트리거용)',
       'GitHub Actions가 ARM64 이미지 빌드 → 본인 GHCR로 push',
       'argocd-image-updater가 digest 감지 → ArgoCD가 5분 안에 `<login>-<repo>.apps.swkoo.kr` 로 라이브 배포',
     ],

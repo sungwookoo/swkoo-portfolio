@@ -127,10 +127,12 @@ Phase 2 빌드 중 적용할 "사업 전환 준비" 패턴:
 - [x] **사용자 액션 이벤트 로그** — `audit_log` 테이블 + `users.audit()` (deploy.service / auth.service 7 곳에서 기록)
 - [x] **에러 응답 `reason` 코드** — `BETA_ALLOWLIST`, `STACK_UNSUPPORTED`, `NO_USER`, `INVALID_REPO`, `APP_NOT_INSTALLED_*`, `NO_EXISTING_DEPLOYMENT`. Phase 2.7에서 `BETA_ALLOWLIST` → `NOT_ALLOWED` 으로 이름 변경
 - [x] **`BRAND_NAME` 환경변수** — `onboarding.config.ts:29`, `/me` 응답에 포함
-- [x] **T&C / Privacy Policy 페이지 자리** — Phase 2.10. `/terms` `/privacy` 베타 스텁 (운영자 본인 정체성 + 연락처). 일반 공개 시점에 확정 약관으로 교체
-- [x] **이미지 스캔 자리 확보**: Phase 2.10. metadata.yaml `image.scanResult: pending` 필드. webhook 구멍은 차후 Trivy 도입 시 채움
+- [x] **T&C / Privacy Policy** — Phase 2.10 베타 스텁 → Phase 3.2 production-tone 텍스트로 교체 (K-PIPA Art.30 + GDPR Art.13 항목 충족, 베타/무상 표현 제거, 단 SLA % 등 코드에 없는 약속은 미포함)
+- [x] **이미지 스캔 — 실제 동작**: Phase 3.3. 매일 03:00 Trivy K8s Job 디스패치 → `scan_results` 테이블에 critical/high/medium count + scanned_at 저장. `/account/export` 응답에 latestScan 노출. (UI 표면화는 후속)
 - [x] **`writeBackMethod` 필드 자리** — Phase 2.10. metadata.yaml `image.writeBackMethod: argocd-image-updater` (현재값). 차후 git write-back으로 교체 가능
 - [x] **Observatory per-viewer 데이터 격리** — Phase 2.11. 3-tier 가시성(비로그인=operator만 / 로그인=operator+본인 / admin=전체). 유료 전환 시 multi-tenant SaaS의 기본 전제 충족 ([deploy-vision §6 2.11](./docs/deploy-vision.md))
+- [x] **per-tenant 매니페스트 repo 분리** — Phase 3.1. `swkoo-deploy` GitHub Org에 사용자별 private repo. 기존 §5 결정 항목 1을 이쪽으로 이관 완료.
+- [x] **사용자 데이터 수명주기 (K-PIPA 권리)** — Phase 3.2. `DELETE /account` 익명화 + deploy repo archive + 환경변수 정리. `GET /account/export` 데이터 이동권. `/consent` 게이트 + `policy_version` 추적. 30일 보존 후 자동 hard delete (Phase 3.3 cron).
 
 ---
 
@@ -148,12 +150,12 @@ Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손
 
 | 결정 | 영향 | 미루는 비용 |
 |---|---|---|
-| 매니페스트 repo per-tenant 분리 | 코드 변경 다수, 마이그레이션 | 단일 repo 가정 코드 줄어들수록 분리 비용 작음 (§2 패턴 따르면 영향 최소화) |
+| ~~매니페스트 repo per-tenant 분리~~ | ~~코드 변경 다수, 마이그레이션~~ | ✅ Phase 3.1에서 결정·실행 완료 (§4 참조) |
 | 다중 노드 / 관리형 k8s | 인프라 비용 발생 | 결정 늦춰도 코드 변경 거의 없음 |
 | 결제 (Stripe 등) | 모듈 통째 추가 | 0 — 완전 별개 |
 | 다중 region | 클러스터 패턴 큰 변경 | 매우 큼, 일찍 결정해야 함 |
 | 회사 entity 설립 | 법률·세무·계좌 | 결정 시점에 30일 |
-| K-PIPA / GDPR 컴플라이언스 | 데이터 처리 절차 변경 | 외국인 고객 받기 시작하면 시급 |
+| K-PIPA / GDPR 컴플라이언스 (절차) | DPO 지정, 침해 통지 절차, 국외 이전 동의 | 핵심 데이터 권리(열람·삭제·동의)는 Phase 3.2에서 완료. 외국인 고객·결제 도입 시 절차적 부분 시급 |
 
 ---
 
@@ -164,3 +166,4 @@ Phase 2 셀프서비스가 동작하면서 노출된, 사업화 전이라도 손
 | 2026-05-08 | 초안 작성 — Phase 2 빌드 직전, 사업전환 고려사항 외부 분리 |
 | 2026-05-12 | Phase 2.10 위생 패스 — §4 체크리스트 4개 항목 ✅ (manifest 경로 헬퍼, T&C/Privacy 스텁, scanResult/writeBackMethod 필드). §4a no-op commit ✅. |
 | 2026-05-14 | Phase 1 종료(친구 2명 + 본인 부계정 실배포 검증). Phase 2.11 — Observatory per-viewer 데이터 격리 §4 추가. |
+| 2026-05-14 (later) | Phase 3 일괄 반영. §4: per-tenant repo 분리(3.1) · K-PIPA 데이터 권리(3.2) · 실제 Trivy 스캔(3.3) · T&C/Privacy production-tone 항목 추가. §5: per-tenant repo 행 ✅ 해소, K-PIPA 행은 절차적 부분만 잔존으로 분리. |

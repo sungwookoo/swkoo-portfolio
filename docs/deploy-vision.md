@@ -107,16 +107,18 @@
 | 2.10 | 위생 패스 (운영자 품질 + 사업 전환 자리) | ✅ | `/admin` 승인대기 카운트 뱃지, no-op commit 감지(tree-sha 동일 시 skip), `getUserManifestPath` 헬퍼 추출, metadata.yaml에 `scanResult`/`writeBackMethod` 필드 자리, `/terms` `/privacy` 베타 스텁 |
 | 2.11 | Observatory per-viewer 가시성 (3-tier) + 헤더 user menu | ✅ | `OptionalJwtAuthGuard` + `viewer-scope` 헬퍼로 비로그인=operator만, 로그인=operator+본인, admin=전체+토글. 헤더 우상단 외부링크 제거 → user menu (avatar dropdown, 로그아웃 포함) |
 | 3.1 | per-tenant 매니페스트 repo 분리 | ✅ | `swkoo-deploy` GitHub Org에 사용자별 private repo 생성. 백엔드: `ensureRepoInOrg`/`archiveRepo` 메서드, register/unregister 흐름이 deploy repo + 작은 registration 파일(`deploy/users/<login>.yaml`)로 분리. ApplicationSet generator: `files: deploy/users/*.yaml`, source repoURL은 `{{ .deployRepo }}` 템플릿. 운영 마이그레이션 완료(2026-05-14): ArgoCD repo-creds Secret(GitHub App), 3명 사용자(hizieun/sungwookoo/sw-koo) JWT impersonation으로 register 재호출, 옛 dir 정리. 모두 Synced/Healthy, HTTP 200 |
+| 3.2 | K-PIPA/GDPR 권리 보장 (BIZ §5의 컴플라이언스 항목) | ✅ | `/privacy` `/terms` 베타 스텁 → 출시 톤 production 텍스트로 교체. `DELETE /account` 로 계정 anonymize + deploy repo archive + 환경변수 정리. `GET /account/export` 로 사용자 데이터(profile, deployment, envVars, latestScan, audit) JSON 다운로드. `POST /auth/consent` + `requiresConsent` 플래그 + `/consent` 페이지로 정책 동의 게이트. 백엔드 OAuth URL을 install URL에서 순수 authorize URL로 전환 (재로그인 시 install settings 페이지로 튀던 UX 버그 수정) |
+| 3.3 | 운영 자동화 (cleanup cron + image scan + host disk GC) | ✅ | `@nestjs/schedule` 도입. `CleanupService` 매일 03:00 KST: (a) 30일 지난 soft-deleted users + audit 항목 hard delete (b) 30일 지난 archived swkoo-deploy repos 완전 삭제 (c) 활성 사용자 Trivy 이미지 스캔 → `scan_results` 테이블에 severity counts 저장. 스캔은 K8s Job 디스패치 (격리, ephemeral, `trivy-db-cache` PVC 공유), `--platform=linux/arm64` 필수 (OCI A1 arm64). 호스트 측: 주 1회 `crictl-prune.timer` systemd timer로 containerd 이미지 캐시 정리 (k3s 디폴트 GC 임계 85%가 너무 늦음) |
 
 ---
 
-## 7. 알려진 한계 (Phase 1)
+## 7. 알려진 한계
 
-- 단일 노드 — 노드 죽으면 친구 앱도 다운.
-- Always Free 천장 (4 OCPU / 24GB / Egress 10TB·월).
+- 단일 노드 — 노드 죽으면 친구 앱도 다운. (다중 노드 / 관리형 k8s는 BIZ_READINESS §5)
+- Always Free 천장 (4 OCPU / 24GB / Egress 10TB·월) → 실측 수용 ceiling ~20명 (CPU 병목).
 - 운영 부담 24/7 1인 → 친구 수 제한적.
-- 보안 격리는 NetworkPolicy + 자원 한도 1차선뿐 (Trivy/admission webhook은 Phase 2).
-- 사용자가 push한 이미지 안의 코드는 검증 안 함 — 신뢰 기반.
+- 보안 격리는 NetworkPolicy + 자원 한도 + Trivy 이미지 스캔(Phase 3.3, severity counts만, admission webhook 차단은 없음).
+- 사용자가 push한 이미지 안의 코드는 검증 안 함 — 신뢰 기반. 스캔은 보고형이지 차단형 아님.
 
 ---
 
@@ -126,21 +128,30 @@
 
 - swkoo-portfolio Application + swkoo-observability Application + 친구 앱 ApplicationSet → Observatory 한 화면에서 함께 본다.
 - 운영자(swkoo) 시점에서 "내가 운영하는 모든 것"이 한 화면.
-- 친구 시점에서 `/deploy` 페이지는 자기 앱만 본다 (또는 처음엔 외부 노출 없음 — admin-only Phase 1).
+- 친구 시점에서 `/deploy` 페이지는 자기 앱만 본다. `/observatory`는 Phase 2.11의 per-viewer 가시성으로 비로그인=operator only / 로그인=operator+본인 / admin=전체+토글.
 
 ---
 
-## 9. 다음 결정 포인트 (이 문서가 채택되면)
+## 9. 다음 결정 포인트
 
-- (a) Phase 1.1 wildcard cert 작업 진행 — `*.apps.swkoo.kr` DNS-01 challenge 설정 (terraform-k3s 또는 별도 ArgoCD app)
-- (b) sample 사용자 manifests 패턴 PR — `deploy/users/sample/` 디렉토리 + ResourceQuota/NetworkPolicy 템플릿
-- (c) "친구 1명" 베타 후보 결정 — 실제 등록 시점에 사용 시나리오가 구체화됨
+Phase 1·2·3.1·3.2·3.3 모두 ✅. 남은 큰 줄기 (BIZ_READINESS §5 참조):
+
+- 회사 entity 설립 (코드와 병렬 가능)
+- 다중 노드 / 관리형 k8s 이전 — CPU 한계(현 ~20명) 해소
+- 결제 모듈 (Stripe) — entity 후속
+- 다중 region — 단일 노드 전제 깸, 대규모 작업
+
+코드 측 잔여 후보:
+- 사용자별 plan tier (admin UI에서 quota 토글) — CPU 수용 인원 확장 + 유료 전환 자리
+- 스테이트풀 서비스 호스팅 (DB 등) — 현재 Phase 1 non-goal에서 풀기
+- 진행도 페이지에 스캔 결과 표면화 (현재 DB에만 저장, `/account/export`로만 접근)
+- E2E·단위 테스트 — phase 2~3 동안 미뤄둠
 
 ---
 
 ## 10. 사업 전환을 고려하는 경우
 
-이 vision은 **friend-only 베타** 가정 위에 작성되었다. 유료 모델로의 전환을 검토할 때는 [`/BIZ_READINESS.md`](../BIZ_READINESS.md)를 참조한다 — 본 문서 §3의 non-goal 중 일부(특히 SLA 보장, 멀티테넌트 격리, 매니페스트 repo 단일성)가 그 시점에 진실이 되어야 하며, BIZ_READINESS는 그 전환 비용·순서·의존성을 추적한다.
+이 vision은 **friend-only 베타** 가정 위에 작성되었다. 유료 모델로의 전환을 검토할 때는 [`/BIZ_READINESS.md`](../BIZ_READINESS.md)를 참조한다 — 본 문서 §3의 non-goal 중 일부(특히 SLA 보장, 다중 노드, 결제)가 그 시점에 진실이 되어야 한다. **매니페스트 repo 단일성과 데이터 격리는 이미 Phase 3.1·3.2에서 정리됨** — repo는 사용자별 분리, 사용자 데이터 수명주기 자동화 완료. 남은 BIZ 결정의 비용·순서·의존성은 BIZ_READINESS에서 추적한다.
 
 ---
 
@@ -151,4 +162,4 @@
 | 2026-05-06 | v0 초안 작성 |
 | 2026-05-08 | §10 추가 — BIZ_READINESS.md cross-link |
 | 2026-05-12 | Phase 2.10 (위생 패스) 추가 — §6 |
-| 2026-05-14 | Phase 1 종료 — §4 성공기준 외부 사용자 3명으로 검증. Phase 2.11 (Observatory per-viewer + user menu) 추가. Phase 3.1 (per-tenant repo split) 코드 머지 + 운영 마이그레이션 완료. |
+| 2026-05-14 | Phase 1 종료 — §4 성공기준 외부 사용자 3명으로 검증. Phase 2.11 (Observatory per-viewer + user menu) 추가. Phase 3.1 (per-tenant repo split) 코드 머지 + 운영 마이그레이션 완료. Phase 3.2 (K-PIPA/GDPR 권리 + production-tone policy text + consent gate + OAuth URL fix). Phase 3.3 (cleanup cron + Trivy 일일 스캔 + crictl-prune 호스트 timer). §7 한계·§8 Observatory·§9 다음 포인트·§10 BIZ 링크 갱신. |
