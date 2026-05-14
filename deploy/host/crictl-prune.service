@@ -1,0 +1,18 @@
+# Host-level systemd unit — prunes containerd images not in use by any
+# running pod. Paired with crictl-prune.timer for weekly execution.
+#
+# k3s' built-in image GC only fires above 85% disk usage, which is too
+# late on a 45Gi root volume. This service pre-empts that by clearing
+# orphan layers on a schedule.
+#
+# Install:
+#   sudo cp deploy/host/crictl-prune.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now crictl-prune.timer
+[Unit]
+Description=Prune unused containerd images from k3s
+Documentation=https://github.com/sungwookoo/swkoo-portfolio
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/k3s crictl rmi --prune
