@@ -151,6 +151,10 @@ export class ScanService {
                   '--severity=CRITICAL,HIGH,MEDIUM',
                   '--cache-dir=/cache',
                   '--scanners=vuln',
+                  // OCI A1 nodes are arm64; friend images are arm64-only.
+                  // Without this, Trivy defaults to linux/amd64 and 404s on
+                  // the multi-arch index lookup.
+                  '--platform=linux/arm64',
                   image,
                 ],
                 volumeMounts: [{ name: 'cache', mountPath: '/cache' }],
