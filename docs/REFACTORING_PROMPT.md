@@ -28,7 +28,7 @@
 ## 📋 현재 프로젝트 상태
 
 ### 프로젝트 구조
-- **위치**: `C:\sungwoo\swkoo-portfolio\` (Windows)
+- **위치**: `C:\sungwoo\swkoo-kr\` (Windows)
 - **Frontend**: Next.js (App Router) + TypeScript + Tailwind CSS
 - **Backend**: NestJS + TypeScript
 - **주요 페이지**:
@@ -268,7 +268,7 @@ Production-ready DevOps Operations Platform
 
 1. **현재 코드베이스 파악**
    ```bash
-   cd C:\sungwoo\swkoo-portfolio
+   cd C:\sungwoo\swkoo-kr
    # 메인 페이지와 Observatory 페이지 구조 확인
    ```
 
