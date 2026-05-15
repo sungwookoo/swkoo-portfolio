@@ -27,6 +27,14 @@ export class AccountController {
     private readonly env: EnvService
   ) {}
 
+  /** Latest Trivy scan for the requesting user, or null if never scanned.
+   * Lightweight (single DB row) — safe to call on page load. The full
+   * record lives in /account/export. */
+  @Get('scan')
+  getLatestScan(@Req() req: AuthedRequest): unknown {
+    return this.users.latestScanResultForUser(req.user.id);
+  }
+
   /** GDPR Art.20 / K-PIPA right to data portability. Returns everything the
    * service knows about the requesting user as a single JSON document. Env
    * values are included (the user already sees them in the env panel — not

@@ -16,6 +16,7 @@ import {
   useDeploymentStatus,
   useEnvVars,
 } from '@/lib/deploy';
+import { LatestScan, useLatestScan } from '@/lib/account';
 
 interface StatusClientProps {
   login: string;
@@ -51,6 +52,8 @@ export function StatusClient({ login, repo }: StatusClientProps): JSX.Element {
         {status && <Checklist status={status} />}
 
         {status && <EnvVarsPanel login={login} repo={repo} />}
+
+        {status && <ScanPanel />}
 
         {status && <DeleteCard login={login} repo={repo} />}
 
@@ -254,6 +257,100 @@ function EnvVarsPanel({ login, repo }: { login: string; repo: string }): JSX.Ele
       )}
     </div>
   );
+}
+
+function ScanPanel(): JSX.Element {
+  const { scan, isLoading, error } = useLatestScan(true);
+
+  return (
+    <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+      <header className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-medium text-slate-300">이미지 스캔</h3>
+        <span className="font-mono text-[10px] uppercase tracking-wide text-slate-600">
+          Trivy · daily 03:00 KST
+        </span>
+      </header>
+
+      {isLoading && !scan && !error && (
+        <p className="text-xs text-slate-500">불러오는 중…</p>
+      )}
+      {error && (
+        <p className="text-sm text-amber-400">조회 실패: {error.message}</p>
+      )}
+
+      {!isLoading && !error && !scan && (
+        <p className="text-xs text-slate-500">
+          아직 스캔 결과가 없습니다. 매일 03:00 KST에 본인 GHCR 이미지를 자동으로 스캔합니다.
+        </p>
+      )}
+
+      {scan && <ScanResult scan={scan} />}
+    </div>
+  );
+}
+
+function ScanResult({ scan }: { scan: LatestScan }): JSX.Element {
+  const hasAction = scan.critical > 0 || scan.high > 0;
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <SeverityChip label="Critical" count={scan.critical} tone="critical" />
+        <SeverityChip label="High" count={scan.high} tone="high" />
+        <SeverityChip label="Medium" count={scan.medium} tone="medium" />
+      </div>
+      <p className="text-xs text-slate-500">
+        <span className="font-mono text-slate-400">{scan.image}</span>{' '}
+        · 스캔: {formatScanRelative(scan.scannedAt)}
+      </p>
+      {hasAction && (
+        <p className="text-xs text-amber-400/90">
+          base image 또는 의존성을 최신으로 업그레이드한 뒤 재배포하면 다음 스캔에서 반영됩니다.
+          현재 결과는 보고용이며, 배포 자체는 차단되지 않습니다.
+        </p>
+      )}
+    </>
+  );
+}
+
+function SeverityChip({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: 'critical' | 'high' | 'medium';
+}): JSX.Element {
+  const active = count > 0;
+  const activeCls =
+    tone === 'critical'
+      ? 'border-red-600/50 bg-red-950/40 text-red-200'
+      : tone === 'high'
+      ? 'border-amber-600/50 bg-amber-950/30 text-amber-200'
+      : 'border-slate-700 bg-slate-900/50 text-slate-300';
+  const inactiveCls = 'border-slate-800 bg-slate-900/30 text-slate-500';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs ${
+        active ? activeCls : inactiveCls
+      }`}
+    >
+      <span className="text-[10px] uppercase tracking-wide">{label}</span>
+      <span className="font-mono font-medium">{count}</span>
+    </span>
+  );
+}
+
+function formatScanRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diffMs = Date.now() - then;
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return '방금';
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  return `${days}일 전`;
 }
 
 type DeleteState =

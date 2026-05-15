@@ -1,4 +1,37 @@
+import useSWR from 'swr';
+
 import { API_BASE_URL } from './api-base';
+
+export interface LatestScan {
+  id: number;
+  userId: number;
+  image: string;
+  critical: number;
+  high: number;
+  medium: number;
+  scannedAt: string;
+  trivyVersion: string | null;
+}
+
+async function fetcher<T>(url: string): Promise<T> {
+  const response = await fetch(url, { credentials: 'include' });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`);
+  }
+  return (await response.json()) as T;
+}
+
+export function useLatestScan(enabled: boolean): {
+  scan: LatestScan | null | undefined;
+  isLoading: boolean;
+  error: Error | undefined;
+} {
+  const { data, error, isLoading } = useSWR<LatestScan | null>(
+    enabled ? `${API_BASE_URL}/account/scan` : null,
+    fetcher
+  );
+  return { scan: data, isLoading, error };
+}
 
 /** Triggers a JSON download with everything the service knows about the
  * signed-in user. Browser does the actual file save. */
