@@ -339,16 +339,16 @@ function UnderTheHood(): JSX.Element {
         </ul>
 
         <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs uppercase tracking-[0.18em]">
-          <DocLink href="https://github.com/sungwookoo/swkoo-portfolio/blob/main/VISION.md">
+          <DocLink href="https://github.com/sungwookoo/swkoo-kr/blob/main/VISION.md">
             VISION
           </DocLink>
-          <DocLink href="https://github.com/sungwookoo/swkoo-portfolio/blob/main/docs/deploy-vision.md">
+          <DocLink href="https://github.com/sungwookoo/swkoo-kr/blob/main/docs/deploy-vision.md">
             deploy-vision
           </DocLink>
-          <DocLink href="https://github.com/sungwookoo/swkoo-portfolio/blob/main/BIZ_READINESS.md">
+          <DocLink href="https://github.com/sungwookoo/swkoo-kr/blob/main/BIZ_READINESS.md">
             BIZ_READINESS
           </DocLink>
-          <DocLink href="https://github.com/sungwookoo/swkoo-portfolio">
+          <DocLink href="https://github.com/sungwookoo/swkoo-kr">
             source
           </DocLink>
         </div>

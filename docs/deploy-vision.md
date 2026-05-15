@@ -61,7 +61,7 @@
    ▼
 [OCIR: <namespace>/users/<friend>/<app>:<sha>]
    ▼
-[manifests repo: swkoo-portfolio (또는 별도)]
+[manifests repo: swkoo-kr (또는 별도)]
    │  CI bot이 image tag 갱신 (또는 Argo Image Updater)
    ▼
 [ArgoCD Application: user-<friend>-<app>]
@@ -80,7 +80,7 @@
 - **registry 분리**: swkoo 본인 image는 OCIR(`nrt.ocir.io/...`) 그대로, **친구 image는 친구의 GHCR(`ghcr.io/<friend>/<app>`)**. 친구는 GitHub 안에서 끝나고, swkoo OCI 한도(20GB Object Storage)는 친구가 늘어도 영향 없음.
 - **이미지 빌드**: 친구 repo의 GitHub Actions가 자기 GHCR로 push (built-in `GITHUB_TOKEN`, 친구가 추가 secret 등록 불필요)
 - **ArgoCD App per user-app**: ApplicationSet으로 자동 생성 (`deploy/users/*` 자동 발견)
-- **manifests repo 위치**: 일단 `swkoo-portfolio/deploy/users/<friend>/<app>/` 하위에 두고, Phase 2 이후 별도 repo로 분리 검토
+- **manifests repo 위치**: 일단 `swkoo-kr/deploy/users/<friend>/<app>/` 하위에 두고, Phase 2 이후 별도 repo로 분리 검토
 
 ---
 
@@ -126,7 +126,7 @@
 
 `/deploy`로 등록된 사용자 앱들도 **swkoo k3s 클러스터의 Application**이므로 Observatory의 cross-tool 타임라인에 자동으로 노출된다.
 
-- swkoo-portfolio Application + swkoo-observability Application + 친구 앱 ApplicationSet → Observatory 한 화면에서 함께 본다.
+- swkoo-kr Application + swkoo-observability Application + 친구 앱 ApplicationSet → Observatory 한 화면에서 함께 본다.
 - 운영자(swkoo) 시점에서 "내가 운영하는 모든 것"이 한 화면.
 - 친구 시점에서 `/deploy` 페이지는 자기 앱만 본다. `/observatory`는 Phase 2.11의 per-viewer 가시성으로 비로그인=operator only / 로그인=operator+본인 / admin=전체+토글.
 

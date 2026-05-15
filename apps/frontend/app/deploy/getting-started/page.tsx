@@ -43,7 +43,7 @@ const sections = [
     bullets: [
       '본인 repo에 `Dockerfile` + `.github/workflows/build.yml` atomic commit',
       '사용자 전용 private repo `swkoo-deploy/<login>` 생성 후 namespace · ResourceQuota · NetworkPolicy · Deployment · Service · Ingress 매니페스트 commit',
-      '운영 repo (`swkoo-portfolio`)에 작은 registration 메타 파일 commit (ArgoCD ApplicationSet 트리거용)',
+      '운영 repo (`swkoo-kr`)에 작은 registration 메타 파일 commit (ArgoCD ApplicationSet 트리거용)',
       'GitHub Actions가 ARM64 이미지 빌드 → 본인 GHCR로 push',
       'argocd-image-updater가 digest 감지 → ArgoCD가 5분 안에 `<login>-<repo>.apps.swkoo.kr` 로 라이브 배포',
     ],

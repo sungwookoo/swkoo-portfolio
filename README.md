@@ -3,7 +3,7 @@
 > **방향 기준선:** [VISION.md](./VISION.md) ← 이 저장소의 모든 결정은 여기에서 파생됩니다.
 > README는 VISION의 구체적 로드맵 표현입니다. 충돌하면 VISION이 우선합니다.
 
-이 디렉터리(`swkoo-portfolio/`)는 `https://swkoo.kr`에 배포되는 **Observatory** 애플리케이션의 저장소 루트입니다. 백엔드는 NestJS, 프론트엔드는 Next.js(App Router) + TypeScript + Tailwind CSS를 사용합니다.
+이 디렉터리(`swkoo-kr/`)는 `https://swkoo.kr`에 배포되는 **Observatory** 애플리케이션의 저장소 루트입니다. 백엔드는 NestJS, 프론트엔드는 Next.js(App Router) + TypeScript + Tailwind CSS를 사용합니다.
 
 ## Observatory는 무엇인가
 

@@ -1,4 +1,4 @@
-# 📚 swkoo-portfolio 문서 인덱스
+# 📚 swkoo-kr 문서 인덱스
 
 > 이 문서는 프로젝트 문서들의 역할과 위치를 정리합니다.
 
@@ -9,7 +9,7 @@ swkoo.kr/
 ├── 작업컨텍스트.md              # 🔧 전체 인프라 컨텍스트 (운영자용)
 ├── terraform-k3s/
 │   └── AGENTS.md               # AI 에이전트 Terraform 가이드
-└── swkoo-portfolio/
+└── swkoo-kr/
     ├── README.md               # 📋 프로젝트 로드맵 & 개요
     ├── deploy/
     │   └── README.md           # Kustomize 배포 가이드
@@ -34,10 +34,10 @@ swkoo.kr/
 
 | 문서 | 위치 | 역할 |
 |------|------|------|
-| **README.md** | `/swkoo-portfolio/` | 프로젝트 로드맵, 기술 스택, 빌드 방법 |
-| **deploy/README.md** | `/swkoo-portfolio/deploy/` | Kustomize 배포 구조 설명 |
+| **README.md** | `/swkoo-kr/` | 프로젝트 로드맵, 기술 스택, 빌드 방법 |
+| **deploy/README.md** | `/swkoo-kr/deploy/` | Kustomize 배포 구조 설명 |
 
-### 기술 문서 (`/swkoo-portfolio/docs/`)
+### 기술 문서 (`/swkoo-kr/docs/`)
 
 | 문서 | 역할 | 상태 |
 |------|------|------|
@@ -55,7 +55,7 @@ swkoo.kr/
 
 1. **새 기능 구현 시**: `docs/` 폴더에 설계 문서 추가
 2. **인프라 변경 시**: `작업컨텍스트.md` 업데이트
-3. **로드맵 진행 시**: `swkoo-portfolio/README.md`의 체크박스 업데이트
+3. **로드맵 진행 시**: `swkoo-kr/README.md`의 체크박스 업데이트
 4. **배포 방식 변경 시**: `deploy/README.md` 업데이트
 
 ## 변경 이력

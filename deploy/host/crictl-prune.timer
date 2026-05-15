@@ -4,7 +4,7 @@
 # next boot instead of waiting a full week.
 [Unit]
 Description=Weekly containerd image prune
-Documentation=https://github.com/sungwookoo/swkoo-portfolio
+Documentation=https://github.com/sungwookoo/swkoo-kr
 
 [Timer]
 OnCalendar=Sun *-*-* 04:00:00 Asia/Seoul

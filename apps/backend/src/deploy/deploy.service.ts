@@ -221,7 +221,7 @@ export class DeployService {
    *   1. User source repo: Dockerfile + GHA workflow.
    *   2. Per-user deploy repo (<deployOwner>/<login>, created if missing):
    *      all k8s manifests at the repo root.
-   *   3. Control repo (swkoo-portfolio): a single registration file
+   *   3. Control repo (swkoo-kr): a single registration file
    *      deploy/users/<login>.yaml that the ApplicationSet `files`
    *      generator reads to materialize the Application.
    *

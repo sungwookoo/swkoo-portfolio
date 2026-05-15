@@ -13,7 +13,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+    repoURL: https://github.com/sungwookoo/swkoo-kr.git
     targetRevision: main
     path: deploy/base
   destination:

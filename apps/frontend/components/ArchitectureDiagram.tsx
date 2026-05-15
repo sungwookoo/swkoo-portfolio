@@ -24,7 +24,7 @@ const diagrams: DiagramInfo[] = [
     end
 
     subgraph GitHub["GitHub"]
-        Repo["📁 Repository<br/>swkoo-portfolio"]
+        Repo["📁 Repository<br/>swkoo-kr"]
         Actions["⚡ GitHub Actions<br/>CI Pipeline"]
     end
 

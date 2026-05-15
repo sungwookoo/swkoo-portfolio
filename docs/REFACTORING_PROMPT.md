@@ -45,8 +45,8 @@
 - ✅ Environment Definition 섹션 (메인 페이지)
 
 ### 참고 문서
-- `swkoo-portfolio/README.md`: 프로젝트 로드맵
-- `swkoo-portfolio/docs/INDEX.md`: 문서 인덱스
+- `swkoo-kr/README.md`: 프로젝트 로드맵
+- `swkoo-kr/docs/INDEX.md`: 문서 인덱스
 - `작업컨텍스트.md`: 인프라 전체 컨텍스트
 
 ---
@@ -259,7 +259,7 @@ Production-ready DevOps Operations Platform
 ### 참고 파일 (읽기 전용)
 - `apps/frontend/components/ArchitectureDiagram.tsx` - 다이어그램 컴포넌트
 - `apps/frontend/components/PipelineCard.tsx` - 파이프라인 카드
-- `swkoo-portfolio/README.md` - 프로젝트 로드맵
+- `swkoo-kr/README.md` - 프로젝트 로드맵
 - `작업컨텍스트.md` - 인프라 컨텍스트
 
 ---

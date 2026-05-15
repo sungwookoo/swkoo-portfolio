@@ -1,6 +1,6 @@
 # VISION
 
-> 이 문서는 `swkoo-portfolio`의 **의사결정 기준선**입니다.
+> 이 문서는 `swkoo-kr`의 **의사결정 기준선**입니다.
 > 새 기능/리팩토링/카피 변경은 이 문서와 충돌하면 채택하지 않습니다.
 > README 로드맵, `docs/REFACTORING_PROMPT.md`, 페이지 카피는 모두 이 문서로부터 파생됩니다.
 

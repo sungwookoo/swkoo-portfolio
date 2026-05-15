@@ -662,7 +662,7 @@ function DeployTrigger({ fullName }: { fullName: string }): JSX.Element {
         {state.kind === 'pending' ? '배포 시작 중…' : 'Deploy →'}
       </button>
       <p className="text-xs text-slate-500">
-        Dockerfile + GitHub Actions workflow를 본인 repo에 commit하고, swkoo-portfolio에
+        Dockerfile + GitHub Actions workflow를 본인 repo에 commit하고, swkoo-kr에
         매니페스트를 추가합니다. 한 사용자당 1개 앱만 등록 가능 (v0).
       </p>
     </div>

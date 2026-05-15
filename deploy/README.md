@@ -1,4 +1,4 @@
-# swkoo-portfolio 배포 가이드
+# swkoo-kr 배포 가이드
 
 ## 구성
 - `base/`: Kustomize 기본 리소스
@@ -87,7 +87,7 @@ kubectl apply -k deploy/base
 kubectl apply -f deploy/argocd/application.yaml
 ```
 
-Argo CD UI에서 `swkoo-portfolio` 애플리케이션을 Sync하면 K3s 클러스터에 프론트/백엔드가 배포됩니다.
+Argo CD UI에서 `swkoo-kr` 애플리케이션을 Sync하면 K3s 클러스터에 프론트/백엔드가 배포됩니다.
 
 ## 커스터마이즈 포인트
 - 도메인/TLS Secret 이름은 `deploy/base/backend/ingress.yaml`, `deploy/base/frontend/ingress.yaml`에서 변경

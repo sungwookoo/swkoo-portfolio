@@ -26,7 +26,7 @@ spec:
         - /spec/source/kustomize/images
   generators:
     - git:
-        repoURL: https://github.com/sungwookoo/swkoo-portfolio.git
+        repoURL: https://github.com/sungwookoo/swkoo-kr.git
         revision: main
         files:
           - path: deploy/users/*.yaml

@@ -11,7 +11,7 @@
 #   sudo systemctl enable --now crictl-prune.timer
 [Unit]
 Description=Prune unused containerd images from k3s
-Documentation=https://github.com/sungwookoo/swkoo-portfolio
+Documentation=https://github.com/sungwookoo/swkoo-kr
 
 [Service]
 Type=oneshot

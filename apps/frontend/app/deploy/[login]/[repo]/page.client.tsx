@@ -390,7 +390,7 @@ function DeleteCard({ login, repo }: { login: string; repo: string }): JSX.Eleme
       {state.kind === 'confirming' && (
         <div className="space-y-3">
           <p className="text-sm text-slate-300">
-            <span className="font-mono">{login}/{repo}</span>의 매니페스트가 swkoo-portfolio에서
+            <span className="font-mono">{login}/{repo}</span>의 매니페스트가 swkoo-kr에서
             삭제되고 ~1-3분 안에 라이브 URL이 다운됩니다.
           </p>
           <p className="text-xs text-slate-500">

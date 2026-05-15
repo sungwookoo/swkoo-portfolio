@@ -27,7 +27,7 @@ export interface OnboardingConfig {
   discordBuildFailureWebhookUrl: string | undefined;
   // Control repo where /api/deploy/register writes a small per-user
   // registration file (deploy/users/<login>.yaml) for ApplicationSet.
-  manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-portfolio"
+  manifestRepo: string; // "<owner>/<name>", e.g. "sungwookoo/swkoo-kr"
   manifestBranch: string;
   // GitHub org that owns one private deploy repo per user
   // (<deployOwner>/<login>). The org installation needs Administration:write
@@ -58,7 +58,7 @@ export const onboardingConfig = registerAs(
       .filter(Boolean),
     discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || undefined,
     discordBuildFailureWebhookUrl: process.env.DISCORD_BUILD_FAILURE_WEBHOOK_URL || undefined,
-    manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-portfolio',
+    manifestRepo: process.env.MANIFEST_REPO ?? 'sungwookoo/swkoo-kr',
     manifestBranch: process.env.MANIFEST_BRANCH ?? 'main',
     deployOwner: process.env.GITHUB_DEPLOY_OWNER ?? 'swkoo-deploy',
     appsDomain: process.env.APPS_DOMAIN ?? 'apps.swkoo.kr',
